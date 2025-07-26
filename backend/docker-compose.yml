@@ -1,0 +1,148 @@
+# ========================================
+# PENITSYSTEM QUANTUM BACKEND - DOCKER COMPOSE
+# ========================================
+
+version: '3.8'
+
+services:
+  # ===== BASE DE DATOS POSTGRESQL =====
+  postgres:
+    image: postgres:15-alpine
+    container_name: penitsystem_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: penitsystem_quantum
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-penitsystem_secure_2025}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    ports:
+      - "5432:5432"
+    networks:
+      - penitsystem_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===== CACHE REDIS =====
+  redis:
+    image: redis:7-alpine
+    container_name: penitsystem_redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-penitsystem_redis_2025}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - penitsystem_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===== BACKEND NESTJS =====
+  backend:
+    build: .
+    container_name: penitsystem_backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-penitsystem_secure_2025}
+      DB_DATABASE: penitsystem_quantum
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-penitsystem_redis_2025}
+      JWT_SECRET: ${JWT_SECRET:-penitsystem_jwt_super_secret_2025}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-penitsystem_refresh_super_secret_2025}
+      ALLOWED_ORIGINS: https://obmgonplus-ia-central.web.app,http://localhost:3000
+    volumes:
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    ports:
+      - "3000:3000"
+    networks:
+      - penitsystem_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===== NGINX REVERSE PROXY =====
+  nginx:
+    image: nginx:alpine
+    container_name: penitsystem_nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - penitsystem_network
+    depends_on:
+      - backend
+
+  # ===== MONITORING (OPCIONAL) =====
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: penitsystem_prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - penitsystem_network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: penitsystem_grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin123}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    networks:
+      - penitsystem_network
+
+# ===== VOLUMES =====
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+# ===== NETWORKS =====
+networks:
+  penitsystem_network:
+    driver: bridge 
