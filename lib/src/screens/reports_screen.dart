@@ -815,7 +815,7 @@ class _CreateReportDialogState extends State<CreateReportDialog> {
   final _descriptionController = TextEditingController();
   ReportType _selectedType = ReportType.nacional;
   ReportFormat _selectedFormat = ReportFormat.pdf;
-  List<String> _tags = [];
+  final List<String> _tags = [];
   bool _isScheduled = false;
   String _scheduleCron = '0 0 * * *'; // Diario a medianoche
 

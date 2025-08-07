@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../providers/alert_provider.dart';
 import '../models/alert.dart';
 import '../widgets/modern_card.dart';
-import '../widgets/modern_button.dart';
 import '../widgets/modern_search_field.dart';
 
 class AlertsScreen extends StatefulWidget {

@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/digital_document_provider.dart';
 import '../models/digital_document.dart';
-import '../widgets/modern_card.dart';
 import '../widgets/modern_button.dart';
-import '../widgets/modern_search_field.dart';
 import '../providers/auth_provider.dart'; // Added import for AuthProvider
 import '../screens/pdf_viewer_screen.dart'; // Added import for PDFViewerScreen
 
@@ -27,7 +25,7 @@ class _DigitalDocumentsScreenState extends State<DigitalDocumentsScreen>
   bool _showAIInsights = false;
   bool _showQuickActions = false;
   bool _showVoiceCommands = false;
-  String _voiceQuery = '';
+  final String _voiceQuery = '';
   String _currentCommand = '';
 
   // Estados de gestos
@@ -183,11 +181,11 @@ class _DigitalDocumentsScreenState extends State<DigitalDocumentsScreen>
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             colors: [
-              const Color(0xFF1A1A2E),
-              const Color(0xFF16213E),
-              const Color(0xFF0F3460),
+              Color(0xFF1A1A2E),
+              Color(0xFF16213E),
+              Color(0xFF0F3460),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -366,8 +364,9 @@ class _DigitalDocumentsScreenState extends State<DigitalDocumentsScreen>
   }
 
   Widget _buildQuickActionsPanel() {
-    if (!_showQuickActions)
+    if (!_showQuickActions) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
 
     return SliverToBoxAdapter(
       child: AnimatedContainer(
@@ -443,8 +442,9 @@ class _DigitalDocumentsScreenState extends State<DigitalDocumentsScreen>
   }
 
   Widget _buildVoiceCommandsPanel() {
-    if (!_showVoiceCommands)
+    if (!_showVoiceCommands) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
 
     return SliverToBoxAdapter(
       child: AnimatedContainer(
@@ -464,11 +464,11 @@ class _DigitalDocumentsScreenState extends State<DigitalDocumentsScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
-                const Icon(Icons.mic, color: Colors.purple, size: 20),
-                const SizedBox(width: 8),
-                const Text(
+                Icon(Icons.mic, color: Colors.purple, size: 20),
+                SizedBox(width: 8),
+                Text(
                   'Comandos de Voz',
                   style: TextStyle(
                     color: Colors.white,
@@ -526,8 +526,9 @@ class _DigitalDocumentsScreenState extends State<DigitalDocumentsScreen>
   }
 
   Widget _buildAIPanel() {
-    if (!_showAIInsights)
+    if (!_showAIInsights) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
 
     return SliverToBoxAdapter(
       child: Container(
@@ -980,7 +981,7 @@ class _DigitalDocumentsScreenState extends State<DigitalDocumentsScreen>
                     children: [
                       if (document.montoTotal != null &&
                           document.montoTotal! > 0) ...[
-                        Icon(Icons.account_balance_wallet,
+                        const Icon(Icons.account_balance_wallet,
                             size: 16, color: Colors.green),
                         const SizedBox(width: 4),
                         Text(
@@ -994,7 +995,8 @@ class _DigitalDocumentsScreenState extends State<DigitalDocumentsScreen>
                       ],
                       if (document.empresasInvolucradas?.isNotEmpty ==
                           true) ...[
-                        Icon(Icons.business, size: 16, color: Colors.blue),
+                        const Icon(Icons.business,
+                            size: 16, color: Colors.blue),
                         const SizedBox(width: 4),
                         Text(
                           document.empresasInvolucradas!.first,
@@ -1009,7 +1011,8 @@ class _DigitalDocumentsScreenState extends State<DigitalDocumentsScreen>
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Icon(Icons.access_time, size: 14, color: Colors.white60),
+                      const Icon(Icons.access_time,
+                          size: 14, color: Colors.white60),
                       const SizedBox(width: 4),
                       Text(
                         _formatDate(document.uploadedAt),
@@ -1248,7 +1251,7 @@ class _DigitalDocumentsScreenState extends State<DigitalDocumentsScreen>
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
-                CircularProgressIndicator(color: Colors.white),
+                const CircularProgressIndicator(color: Colors.white),
               ],
             ),
           ),
@@ -1388,11 +1391,11 @@ class _DigitalDocumentsScreenState extends State<DigitalDocumentsScreen>
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A2E),
-        title: Row(
+        title: const Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.green, size: 24),
-            const SizedBox(width: 8),
-            const Text(
+            Icon(Icons.check_circle, color: Colors.green, size: 24),
+            SizedBox(width: 8),
+            Text(
               '¡Documento Escaneado!',
               style:
                   TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -1482,11 +1485,11 @@ class _DigitalDocumentsScreenState extends State<DigitalDocumentsScreen>
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A2E),
-        title: Row(
+        title: const Row(
           children: [
-            const Icon(Icons.error, color: Colors.red, size: 24),
-            const SizedBox(width: 8),
-            const Text(
+            Icon(Icons.error, color: Colors.red, size: 24),
+            SizedBox(width: 8),
+            Text(
               'Error',
               style: TextStyle(color: Colors.white),
             ),
@@ -1516,11 +1519,11 @@ class _DigitalDocumentsScreenState extends State<DigitalDocumentsScreen>
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A2E),
-        title: Row(
+        title: const Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.green, size: 24),
-            const SizedBox(width: 8),
-            const Text(
+            Icon(Icons.check_circle, color: Colors.green, size: 24),
+            SizedBox(width: 8),
+            Text(
               '¡Documento Escaneado!',
               style:
                   TextStyle(color: Colors.white, fontWeight: FontWeight.bold),

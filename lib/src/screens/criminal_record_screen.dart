@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/prisoner_provider.dart';
-import '../models/administrative.dart';
 
 class CriminalRecordScreen extends StatefulWidget {
   const CriminalRecordScreen({super.key});
@@ -35,7 +32,7 @@ class _CriminalRecordScreenState extends State<CriminalRecordScreen> {
   final _fechaMesController = TextEditingController();
   final _fechaAnoController = TextEditingController();
 
-  bool _generating = false;
+  final bool _generating = false;
 
   Future<void> _generateRequestForm() async {
     // TODO: Implement PDF generation when backend is ready

@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 class Province {
   final String id;
   final String name;

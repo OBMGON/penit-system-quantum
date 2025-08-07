@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'dart:io';
-import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
 import '../models/digital_document.dart';
 import '../services/offline_service.dart';
-import '../services/api_service.dart';
 import '../services/ocr_service.dart' as ocr;
 
 class DigitalDocumentProvider extends ChangeNotifier {
@@ -838,10 +834,12 @@ class DigitalDocumentProvider extends ChangeNotifier {
   }
 
   int _getConfidentialLevel(DocumentType type) {
-    if (type == DocumentType.presupuesto || type == DocumentType.nomina)
+    if (type == DocumentType.presupuesto || type == DocumentType.nomina) {
       return 5;
-    if (type == DocumentType.gastosMensuales || type == DocumentType.contrato)
+    }
+    if (type == DocumentType.gastosMensuales || type == DocumentType.contrato) {
       return 4;
+    }
     if (type == DocumentType.irpf) return 3;
     return 1;
   }

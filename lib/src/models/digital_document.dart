@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 
 enum DocumentType {
   // Documentos gubernamentales principales
@@ -316,25 +315,31 @@ class DigitalDocument {
 
     // Extracción de empresas
     final empresas = <String>[];
-    if (lowerText.contains('martinez hermanos'))
+    if (lowerText.contains('martinez hermanos')) {
       empresas.add('Martinez Hermanos');
-    if (lowerText.contains('pafi supermercados'))
+    }
+    if (lowerText.contains('pafi supermercados')) {
       empresas.add('PAFI Supermercados');
+    }
     if (lowerText.contains('mifindi')) empresas.add('MIFINDI');
-    if (lowerText.contains('fcc isabel ramon'))
+    if (lowerText.contains('fcc isabel ramon')) {
       empresas.add('FCC Isabel Ramon');
+    }
     if (lowerText.contains('pdf autos')) empresas.add('PDF Autos');
     if (lowerText.contains('pegasos')) empresas.add('Pegasos');
-    if (lowerText.contains('mokuak multiservicios'))
+    if (lowerText.contains('mokuak multiservicios')) {
       empresas.add('Mokuak Multiservicios');
+    }
     if (lowerText.contains('total energy')) empresas.add('Total Energy');
     if (lowerText.contains('cofarma')) empresas.add('Cofarma');
     if (lowerText.contains('geogam')) empresas.add('Geogam');
     if (lowerText.contains('gas guinea')) empresas.add('Gas Guinea');
-    if (lowerText.contains('panaderia mia nkoco'))
+    if (lowerText.contains('panaderia mia nkoco')) {
       empresas.add('Panaderia Mia Nkoco');
-    if (lowerText.contains('petrolifera eglng'))
+    }
+    if (lowerText.contains('petrolifera eglng')) {
       empresas.add('Petrolifera EGLNG');
+    }
     if (lowerText.contains('sonagas')) empresas.add('SONAGAS');
 
     if (empresas.isNotEmpty) {
@@ -347,10 +352,12 @@ class DigitalDocument {
     if (lowerText.contains('crm de teguete')) centros.add('CRM Teguete');
     if (lowerText.contains('carcel de bata')) centros.add('Cárcel de Bata');
     if (lowerText.contains('carcel de malabo')) centros.add('Cárcel de Malabo');
-    if (lowerText.contains('carcel publica de evinayong'))
+    if (lowerText.contains('carcel publica de evinayong')) {
       centros.add('Cárcel Pública de Evinayong');
-    if (lowerText.contains('centro de reeducacion de menores'))
+    }
+    if (lowerText.contains('centro de reeducacion de menores')) {
       centros.add('Centro de Reeducación de Menores');
+    }
 
     if (centros.isNotEmpty) {
       data['centrosPenitenciarios'] = centros;
@@ -363,22 +370,30 @@ class DigitalDocument {
 
     // Extracción de tipos de gasto
     final tiposGasto = <String>[];
-    if (lowerText.contains('suministro de alimentos'))
+    if (lowerText.contains('suministro de alimentos')) {
       tiposGasto.add('Suministro de Alimentos');
-    if (lowerText.contains('suministro de panes'))
+    }
+    if (lowerText.contains('suministro de panes')) {
       tiposGasto.add('Suministro de Panes');
-    if (lowerText.contains('suministro de medicamentos'))
+    }
+    if (lowerText.contains('suministro de medicamentos')) {
       tiposGasto.add('Suministro de Medicamentos');
-    if (lowerText.contains('suministro de combustible'))
+    }
+    if (lowerText.contains('suministro de combustible')) {
       tiposGasto.add('Suministro de Combustible');
-    if (lowerText.contains('suministro de gas'))
+    }
+    if (lowerText.contains('suministro de gas')) {
       tiposGasto.add('Suministro de Gas');
-    if (lowerText.contains('mantenimiento de vehiculos'))
+    }
+    if (lowerText.contains('mantenimiento de vehiculos')) {
       tiposGasto.add('Mantenimiento de Vehículos');
-    if (lowerText.contains('formacion profesional'))
+    }
+    if (lowerText.contains('formacion profesional')) {
       tiposGasto.add('Formación Profesional');
-    if (lowerText.contains('gasto del personal'))
+    }
+    if (lowerText.contains('gasto del personal')) {
       tiposGasto.add('Gasto del Personal');
+    }
 
     if (tiposGasto.isNotEmpty) {
       data['tiposGasto'] = tiposGasto;
@@ -398,8 +413,9 @@ class DigitalDocument {
   bool canAccess(String userRole) {
     if (allowedRoles.contains('todos')) return true;
     if (allowedRoles.contains(userRole)) return true;
-    if (userRole == 'Director General')
+    if (userRole == 'Director General') {
       return true; // El director siempre tiene acceso
+    }
     return false;
   }
 
@@ -409,10 +425,12 @@ class DigitalDocument {
   // Formatear tamaño del archivo
   String get formattedFileSize {
     if (fileSize < 1024) return '$fileSize B';
-    if (fileSize < 1024 * 1024)
+    if (fileSize < 1024 * 1024) {
       return '${(fileSize / 1024).toStringAsFixed(1)} KB';
-    if (fileSize < 1024 * 1024 * 1024)
+    }
+    if (fileSize < 1024 * 1024 * 1024) {
       return '${(fileSize / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
     return '${(fileSize / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 

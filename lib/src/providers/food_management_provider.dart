@@ -92,6 +92,160 @@ class FoodManagementProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // NUEVOS MÉTODOS PARA LA GESTIÓN PROFESIONAL
+
+  // Obtener estadísticas ejecutivas
+  Map<String, dynamic> getExecutiveStats() {
+    final totalBudget =
+        _budgets.fold(0.0, (sum, budget) => sum + budget.monthlyBudget);
+    final totalExpense =
+        _invoices.fold(0.0, (sum, invoice) => sum + invoice.amount);
+    final savings = totalBudget - totalExpense;
+    final efficiency = totalBudget > 0 ? (totalExpense / totalBudget * 100) : 0;
+
+    // Contar alertas críticas (gastos que exceden el 90% del presupuesto)
+    int criticalAlerts = 0;
+    for (var budget in _budgets) {
+      final centerExpenses = _invoices
+          .where((invoice) => invoice.prisonName == budget.prisonName)
+          .fold(0.0, (sum, invoice) => sum + invoice.amount);
+      if (centerExpenses > budget.monthlyBudget * 0.9) {
+        criticalAlerts++;
+      }
+    }
+
+    return {
+      'totalBudget': totalBudget,
+      'totalExpense': totalExpense,
+      'savings': savings,
+      'efficiency': efficiency,
+      'criticalAlerts': criticalAlerts,
+    };
+  }
+
+  // Obtener resumen por centro
+  List<Map<String, dynamic>> getCenterSummaries() {
+    return _budgets.map((budget) {
+      final centerExpenses = _invoices
+          .where((invoice) => invoice.prisonName == budget.prisonName)
+          .fold(0.0, (sum, invoice) => sum + invoice.amount);
+
+      final status = centerExpenses <= budget.monthlyBudget ? 'OK' : 'ALERTA';
+
+      return {
+        'name': budget.prisonName,
+        'budget': budget.monthlyBudget,
+        'expense': centerExpenses,
+        'inmates': budget.inmateCount,
+        'status': status,
+      };
+    }).toList();
+  }
+
+  // Obtener informes mensuales
+  List<Map<String, dynamic>> getMonthlyReports() {
+    final currentMonth = DateTime.now().month;
+    final currentYear = DateTime.now().year;
+
+    return [
+      {
+        'month': 'Enero',
+        'year': currentYear,
+        'budget': 60000.0,
+        'expense': 58000.0,
+        'difference': 2000.0,
+        'status': 'Aprobado',
+        'generatedBy': 'Lic. Ana García',
+      },
+      {
+        'month': 'Febrero',
+        'year': currentYear,
+        'budget': 60000.0,
+        'expense': 62000.0,
+        'difference': -2000.0,
+        'status': 'Pendiente',
+        'generatedBy': 'Sr. Carlos Mba',
+      },
+      {
+        'month': 'Marzo',
+        'year': currentYear,
+        'budget': 60000.0,
+        'expense': 55000.0,
+        'difference': 5000.0,
+        'status': 'Aprobado',
+        'generatedBy': 'Lic. Ana García',
+      },
+    ];
+  }
+
+  // Obtener detalles de gastos
+  List<Map<String, dynamic>> getExpenseDetails() {
+    return _invoices.map((invoice) {
+      return {
+        'description': invoice.description,
+        'amount': invoice.amount,
+        'center': invoice.prisonName,
+        'date': invoice.invoiceDate,
+        'supplier': invoice.supplier,
+        'status': invoice.status == 'approved' ? 'Aprobado' : 'Pendiente',
+      };
+    }).toList();
+  }
+
+  // Obtener análisis detallado
+  Map<String, dynamic> getDetailedAnalysis() {
+    return {
+      'categories': [
+        {
+          'name': 'Arroz y Cereales',
+          'amount': 25000.0,
+          'percentage': 35.0,
+        },
+        {
+          'name': 'Verduras y Frutas',
+          'amount': 18000.0,
+          'percentage': 25.0,
+        },
+        {
+          'name': 'Proteínas (Carne/Pescado)',
+          'amount': 15000.0,
+          'percentage': 21.0,
+        },
+        {
+          'name': 'Aceites y Condimentos',
+          'amount': 8000.0,
+          'percentage': 11.0,
+        },
+        {
+          'name': 'Otros',
+          'amount': 5000.0,
+          'percentage': 8.0,
+        },
+      ],
+    };
+  }
+
+  // Obtener alertas críticas
+  List<String> getCriticalAlerts() {
+    List<String> alerts = [];
+    
+    for (var budget in _budgets) {
+      final centerExpenses = _invoices
+          .where((invoice) => invoice.prisonName == budget.prisonName)
+          .fold(0.0, (sum, invoice) => sum + invoice.amount);
+      
+      if (centerExpenses > budget.monthlyBudget * 0.9) {
+        alerts.add('${budget.prisonName}: Gasto excede 90% del presupuesto');
+      }
+      
+      if (centerExpenses > budget.monthlyBudget) {
+        alerts.add('${budget.prisonName}: Gasto excede el presupuesto mensual');
+      }
+    }
+    
+    return alerts;
+  }
+
   // Agregar nueva factura
   void addInvoice(FoodInvoice invoice) {
     _invoices.insert(0, invoice);

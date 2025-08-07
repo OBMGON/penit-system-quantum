@@ -21,7 +21,7 @@ class _SendDocumentScreenState extends State<SendDocumentScreen> {
 
   DocumentType _selectedType = DocumentType.otro;
   DocumentPriority _selectedPriority = DocumentPriority.medio;
-  DocumentStatus _selectedStatus = DocumentStatus.pendiente;
+  final DocumentStatus _selectedStatus = DocumentStatus.pendiente;
 
   XFile? _selectedImage;
   bool _isLoading = false;

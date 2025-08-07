@@ -121,10 +121,24 @@ class _SplashScreenState extends State<SplashScreen>
     _navigateNext();
   }
 
-  void _navigateNext() {
+  void _navigateNext() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    // TEMPORAL: Forzar login como Director General para testing
+    if (!auth.isLoggedIn) {
+      try {
+        // Simular login como Director General
+        await auth.login('Isacio97', '1234', 'Director General');
+      } catch (e) {
+        // Si falla el login, ir a la pantalla de login
+        Navigator.of(context).pushReplacementNamed('/login');
+        return;
+      }
+    }
+
     if (auth.isLoggedIn && auth.role != null) {
-      Navigator.of(context).pushReplacementNamed('/main');
+      // Navegar directamente a la gestión de alimentos para testing
+      Navigator.of(context).pushReplacementNamed('/food-management');
     } else {
       Navigator.of(context).pushReplacementNamed('/login');
     }
@@ -214,9 +228,9 @@ class _SplashScreenState extends State<SplashScreen>
                             offset: Offset(0, _slideUp.value),
                             child: Opacity(
                               opacity: _fadeIn.value,
-                              child: Column(
+                              child: const Column(
                                 children: [
-                                  const Text(
+                                  Text(
                                     'PenitSystem Quantum',
                                     style: TextStyle(
                                       fontSize: 32,
@@ -232,8 +246,8 @@ class _SplashScreenState extends State<SplashScreen>
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
-                                  const Text(
+                                  SizedBox(height: 8),
+                                  Text(
                                     'Sistema Penitenciario Nacional 2025',
                                     style: TextStyle(
                                       fontSize: 18,

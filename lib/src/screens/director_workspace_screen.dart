@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/prisoner_provider.dart';
-import '../providers/hospitalization_provider.dart';
 import '../providers/alert_provider.dart';
 import '../providers/report_provider.dart';
-import '../providers/digital_document_provider.dart';
-import '../widgets/modern_card.dart';
-import '../widgets/modern_button.dart';
-import 'package:fl_chart/fl_chart.dart';
 
 class DirectorWorkspaceScreen extends StatefulWidget {
   const DirectorWorkspaceScreen({super.key});
@@ -19,170 +14,148 @@ class DirectorWorkspaceScreen extends StatefulWidget {
 
 class _DirectorWorkspaceScreenState extends State<DirectorWorkspaceScreen>
     with TickerProviderStateMixin {
-  late AnimationController _fadeController;
-  late Animation<double> _fadeAnimation;
-  late AnimationController _slideController;
-  late Animation<Offset> _slideAnimation;
+  late AnimationController _pulseController;
+  late AnimationController _scanController;
+  late AnimationController _glowController;
+  late Animation<double> _pulseAnimation;
+  late Animation<double> _scanAnimation;
+  late Animation<double> _glowAnimation;
+
+  // Estado del sistema
+  bool _isEmergencyMode = false;
+  bool _isLockdownActive = false;
+  final int _activeAlerts = 5;
+  int _totalInmates = 0;
+  final int _criticalCases = 5;
+
+  // Datos de reclusos por ciudad
+  Map<String, int> _inmatesByCity = {
+    'Bata': 0,
+    'Malabo': 0,
+    'Evinayong': 0,
+  };
 
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+
+    // Controladores de animación
+    _pulseController = AnimationController(
+      duration: const Duration(seconds: 2),
       vsync: this,
     );
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
+    _scanController = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    );
+    _glowController = AnimationController(
+      duration: const Duration(seconds: 1),
+      vsync: this,
+    );
+
+    // Animaciones
+    _pulseAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.1,
     ).animate(CurvedAnimation(
-      parent: _fadeController,
+      parent: _pulseController,
       curve: Curves.easeInOut,
     ));
 
-    _slideController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
+    _scanAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
     ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOutCubic,
+      parent: _scanController,
+      curve: Curves.linear,
     ));
 
-    _fadeController.forward();
-    _slideController.forward();
+    _glowAnimation = Tween<double>(
+      begin: 0.5,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _glowController,
+      curve: Curves.easeInOut,
+    ));
 
-    // Cargar datos al inicializar
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PrisonerProvider>().loadInmates();
-      context.read<AlertProvider>().loadAlerts();
-      context.read<ReportProvider>().loadReports();
-    });
+    // Iniciar animaciones
+    _pulseController.repeat(reverse: true);
+    _scanController.repeat();
+    _glowController.repeat(reverse: true);
+
+    // Cargar datos
+    _loadData();
+  }
+
+  void _loadData() {
+    // Simular datos de reclusos por ciudad
+    _inmatesByCity = {
+      'Bata': 45,
+      'Malabo': 32,
+      'Evinayong': 18,
+    };
+
+    _totalInmates = _inmatesByCity.values.reduce((a, b) => a + b);
+
+    setState(() {});
   }
 
   @override
   void dispose() {
-    _fadeController.dispose();
-    _slideController.dispose();
+    _pulseController.dispose();
+    _scanController.dispose();
+    _glowController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: Scaffold(
-          backgroundColor: Colors.grey[50],
-          appBar: AppBar(
-            title: const Text(
-              'Espacio de Trabajo - Director General',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            backgroundColor: const Color(0xFF17643A),
-            elevation: 0,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.notifications, color: Colors.white),
-                onPressed: () {
-                  Navigator.pushNamed(context, '/alerts');
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.settings, color: Colors.white),
-                onPressed: () {
-                  Navigator.pushNamed(context, '/settings');
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.logout, color: Colors.white),
-                onPressed: () {
-                  Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    '/login',
-                    (route) => false,
-                  );
-                },
-              ),
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF0A0A0A),
+              Color(0xFF000000),
             ],
           ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildWelcomeCard(),
-                const SizedBox(height: 20),
-                _buildQuickActions(),
-                const SizedBox(height: 20),
-                _buildStatisticsSection(),
-                const SizedBox(height: 20),
-                _buildRecentActivity(),
-              ],
-            ),
-          ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildWelcomeCard() {
-    return ModernCard(
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.blue[600]!, Colors.blue[800]!],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
+        child: Stack(
           children: [
-            CircleAvatar(
-              radius: 30,
-              backgroundColor: Colors.white.withOpacity(0.2),
-              child: Icon(
-                Icons.admin_panel_settings,
-                size: 40,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Bienvenido, Director General',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+            // Efectos de fondo
+            _buildBackgroundEffects(),
+            // Línea de escaneo
+            _buildScanOverlay(),
+            // Contenido principal
+            SafeArea(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      // Header del centro de mando
+                      _buildCommandCenterHeader(),
+                      const SizedBox(height: 20),
+                      // Estado del director
+                      _buildStatusOverview(),
+                      const SizedBox(height: 20),
+                      // Estadísticas por ciudad
+                      _buildCityStatistics(),
+                      const SizedBox(height: 20),
+                      // Funciones principales
+                      _buildMainFunctions(),
+                      const SizedBox(height: 20),
+                      // Búsqueda inteligente
+                      _buildSmartSearch(),
+                      const SizedBox(height: 30),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Panel de Control Nacional del Sistema Penitenciario',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withOpacity(0.9),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-            Icon(
-              Icons.shield,
-              color: Colors.white.withOpacity(0.7),
-              size: 40,
             ),
           ],
         ),
@@ -190,64 +163,531 @@ class _DirectorWorkspaceScreenState extends State<DirectorWorkspaceScreen>
     );
   }
 
-  Widget _buildQuickActions() {
+  Widget _buildCommandCenterHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF00D4FF).withOpacity(0.2),
+            const Color(0xFF00D4FF).withOpacity(0.05),
+          ],
+        ),
+        border: Border(
+          bottom: BorderSide(
+            color: const Color(0xFF00D4FF).withOpacity(0.4),
+            width: 2,
+          ),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Fila superior con logo y título
+          Row(
+            children: [
+              // Logo del sistema
+              AnimatedBuilder(
+                animation: _pulseAnimation,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _pulseAnimation.value,
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF00D4FF), Color(0xFF0099CC)],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF00D4FF).withOpacity(0.6),
+                            blurRadius: 15,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.security,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 12),
+              // Título del sistema
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'CENTRO DE MANDO NACIONAL',
+                      style: TextStyle(
+                        color: Color(0xFF00D4FF),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                    Text(
+                      'Sistema Penitenciario - Control Total',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Controles de emergencia
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              Expanded(
+                child: _buildEmergencyButton(
+                  Icons.warning_amber_rounded,
+                  'EMERGENCIA',
+                  Colors.red,
+                  () => _toggleEmergencyMode(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildEmergencyButton(
+                  Icons.lock,
+                  'LOCKDOWN',
+                  Colors.orange,
+                  () => _toggleLockdown(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildEmergencyButton(
+                  Icons.logout,
+                  'SALIR',
+                  Colors.purple,
+                  () => Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/login',
+                    (route) => false,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmergencyButton(
+      IconData icon, String text, Color color, VoidCallback onPressed) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: color.withOpacity(0.6),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.3),
+                blurRadius: 8,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: color,
+                size: 20,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                text,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusOverview() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF00D4FF).withOpacity(0.1),
+            const Color(0xFF00D4FF).withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF00D4FF).withOpacity(0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00D4FF).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.person,
+                  color: Color(0xFF00D4FF),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'DIRECTOR GENERAL',
+                      style: TextStyle(
+                        color: Color(0xFF00D4FF),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                    Text(
+                      'Control Total del Sistema Penitenciario Nacional',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatusIndicator('SISTEMA OPERATIVO', Colors.green),
+              _buildStatusIndicator('CONECTADO', const Color(0xFF00D4FF)),
+              _buildStatusIndicator('SEGURIDAD MÁXIMA', Colors.orange),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusIndicator(String text, Color color) {
+    return Column(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.6),
+                blurRadius: 8,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          text,
+          style: TextStyle(
+            color: color,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCityStatistics() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Acciones Principales',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey[800],
-          ),
+        Row(
+          children: [
+            Container(
+              width: 4,
+              height: 20,
+              decoration: const BoxDecoration(
+                color: Color(0xFF00D4FF),
+                borderRadius: BorderRadius.only(
+                  topRight: Radius.circular(2),
+                  bottomRight: Radius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'POBLACIÓN POR CIUDAD',
+              style: TextStyle(
+                color: Color(0xFF00D4FF),
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.0,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 15),
         LayoutBuilder(
           builder: (context, constraints) {
             return GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: constraints.maxWidth > 600 ? 3 : 2,
+              crossAxisCount: constraints.maxWidth > 600 ? 3 : 1,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
-              childAspectRatio: 1.3,
+              childAspectRatio: constraints.maxWidth > 600 ? 1.2 : 2.5,
+              children: _inmatesByCity.entries.map((entry) {
+                return _buildCityCard(entry.key, entry.value);
+              }).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCityCard(String city, int inmates) {
+    Color color;
+    IconData icon;
+
+    switch (city) {
+      case 'Bata':
+        color = Colors.blue;
+        icon = Icons.location_city;
+        break;
+      case 'Malabo':
+        color = Colors.green;
+        icon = Icons.location_city;
+        break;
+      case 'Evinayong':
+        color = Colors.orange;
+        icon = Icons.location_city;
+        break;
+      default:
+        color = Colors.grey;
+        icon = Icons.location_city;
+    }
+
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ciudad: $city - Reclusos: $inmates'),
+            backgroundColor: color,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                color.withOpacity(0.1),
+                color.withOpacity(0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: color.withOpacity(0.3),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.2),
+                blurRadius: 10,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: color,
+                size: 32,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                inmates.toString(),
+                style: TextStyle(
+                  color: color,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                city,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Reclusos',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.6),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainFunctions() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 4,
+              height: 20,
+              decoration: const BoxDecoration(
+                color: Color(0xFF00D4FF),
+                borderRadius: BorderRadius.only(
+                  topRight: Radius.circular(2),
+                  bottomRight: Radius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'FUNCIONES PRINCIPALES',
+              style: TextStyle(
+                color: Color(0xFF00D4FF),
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.0,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 15),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: constraints.maxWidth > 600 ? 2 : 1,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: constraints.maxWidth > 600 ? 1.1 : 1.3,
               children: [
-                _buildActionCard(
-                  'Gestión de Reclusos',
-                  Icons.people,
-                  Colors.blue,
-                  () => Navigator.pushNamed(context, '/register'),
-                ),
-                _buildActionCard(
-                  'Sistema de Alertas',
-                  Icons.warning,
-                  Colors.orange,
-                  () => Navigator.pushNamed(context, '/alerts'),
-                ),
-                _buildActionCard(
-                  'Reportes',
-                  Icons.assessment,
+                _buildFunctionCard(
+                  'GESTIÓN DE ALIMENTOS',
+                  Icons.restaurant,
+                  'Control de raciones y menús',
+                  'Administrar suministros',
                   Colors.green,
-                  () => Navigator.pushNamed(context, '/reports'),
+                  () => Navigator.pushNamed(context, '/food-management'),
                 ),
-                _buildActionCard(
-                  'Hospitalizaciones',
-                  Icons.local_hospital,
+                _buildFunctionCard(
+                  'HOSPITAL',
+                  Icons.medical_services,
+                  'Atención médica',
+                  'Control de salud',
                   Colors.red,
-                  () => Navigator.pushNamed(context, '/hospitalizations'),
+                  () => Navigator.pushNamed(context, '/hospital'),
                 ),
-                _buildActionCard(
-                  'Configuración',
-                  Icons.settings,
+                _buildFunctionCard(
+                  'REGISTROS DE ENTRADA',
+                  Icons.person_add,
+                  'Nuevos reclusos',
+                  'Documentación inicial',
+                  Colors.blue,
+                  () => Navigator.pushNamed(context, '/inmate-registration'),
+                ),
+                _buildFunctionCard(
+                  'VER DOCUMENTOS',
+                  Icons.folder_open,
+                  'Todos los documentos',
+                  'Acceso completo',
+                  Colors.orange,
+                  () => Navigator.pushNamed(context, '/documents'),
+                ),
+                _buildFunctionCard(
+                  'CERTIFICADO ANTECEDENTES',
+                  Icons.description,
+                  'Solicitud de certificado',
+                  'Antecedentes penales',
                   Colors.purple,
-                  () => Navigator.pushNamed(context, '/settings'),
+                  () => Navigator.pushNamed(context, '/criminal-record'),
                 ),
-                _buildActionCard(
-                  'Manual de Usuario',
-                  Icons.help,
+                _buildFunctionCard(
+                  'CANCELACIÓN ANTECEDENTES',
+                  Icons.cancel,
+                  'Solicitud de cancelación',
+                  'Limpieza de expediente',
                   Colors.teal,
-                  () => Navigator.pushNamed(context, '/user-manual'),
+                  () => Navigator.pushNamed(context, '/record-cancellation'),
+                ),
+                _buildFunctionCard(
+                  'ESCANER INTELIGENTE',
+                  Icons.document_scanner,
+                  'Escanear documentos',
+                  'Guardar en sistema',
+                  Colors.indigo,
+                  () => Navigator.pushNamed(context, '/scanner'),
                 ),
               ],
             );
@@ -257,47 +697,88 @@ class _DirectorWorkspaceScreenState extends State<DirectorWorkspaceScreen>
     );
   }
 
-  Widget _buildActionCard(
-      String title, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildFunctionCard(String title, IconData icon, String subtitle,
+      String description, Color color, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Padding(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color, size: 24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                color.withOpacity(0.1),
+                color.withOpacity(0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: color.withOpacity(0.3),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.2),
+                blurRadius: 10,
+                spreadRadius: 1,
               ),
-              const SizedBox(height: 8),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: color,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.8),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
               Text(
-                title,
+                description,
                 style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[800],
+                  color: Colors.white.withOpacity(0.6),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -306,347 +787,267 @@ class _DirectorWorkspaceScreenState extends State<DirectorWorkspaceScreen>
     );
   }
 
-  Widget _buildStatisticsSection() {
-    return Consumer<PrisonerProvider>(
-      builder: (context, prisonerProvider, child) {
-        final stats = prisonerProvider.getStatistics();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Estadísticas Nacionales',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[800],
+  Widget _buildSmartSearch() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF00D4FF).withOpacity(0.1),
+            const Color(0xFF00D4FF).withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF00D4FF).withOpacity(0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00D4FF).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.search,
+                  color: Color(0xFF00D4FF),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'BÚSQUEDA INTELIGENTE',
+                style: TextStyle(
+                  color: Color(0xFF00D4FF),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xFF00D4FF).withOpacity(0.3),
+                width: 1,
               ),
             ),
-            const SizedBox(height: 12),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                return GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: constraints.maxWidth > 600 ? 4 : 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 1.2,
-                  children: [
-                    _buildStatCard(
-                      'Total Reclusos',
-                      '${stats['total'] ?? 0}',
-                      Icons.people,
-                      const Color(0xFF17643A),
+            child: TextField(
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Buscar recluso, documento, expediente...',
+                hintStyle: TextStyle(
+                  color: Colors.white.withOpacity(0.6),
+                  fontSize: 14,
+                ),
+                prefixIcon: const Icon(
+                  Icons.search,
+                  color: Color(0xFF00D4FF),
+                  size: 20,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+              onSubmitted: (value) {
+                if (value.isNotEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Buscando: $value'),
+                      backgroundColor: const Color(0xFF00D4FF),
+                      duration: const Duration(seconds: 2),
                     ),
-                    _buildStatCard(
-                      'Próximos a Liberación',
-                      '${stats['nearRelease'] ?? 0}',
-                      Icons.exit_to_app,
-                      Colors.orange,
-                    ),
-                    _buildStatCard(
-                      'Casos Críticos',
-                      '${stats['critical'] ?? 0}',
-                      Icons.warning,
-                      Colors.red,
-                    ),
-                    _buildStatCard(
-                      'Centros Activos',
-                      '${stats['byPrison']?.length ?? 0}',
-                      Icons.business,
-                      Colors.blue,
-                    ),
-                  ],
-                );
+                  );
+                }
               },
             ),
-            const SizedBox(height: 20),
-            _buildDistributionChart(stats),
-          ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildSearchFilter('Reclusos', Icons.people),
+              _buildSearchFilter('Documentos', Icons.description),
+              _buildSearchFilter('Expedientes', Icons.folder),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchFilter(String label, IconData icon) {
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Filtrar por: $label'),
+            backgroundColor: const Color(0xFF00D4FF),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      },
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF00D4FF).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: const Color(0xFF00D4FF).withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: const Color(0xFF00D4FF),
+                size: 16,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Color(0xFF00D4FF),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackgroundEffects() {
+    return CustomPaint(
+      painter: BackgroundPainter(),
+      size: Size.infinite,
+    );
+  }
+
+  Widget _buildScanOverlay() {
+    return AnimatedBuilder(
+      animation: _scanAnimation,
+      builder: (context, child) {
+        return CustomPaint(
+          painter: ScanLinePainter(_scanAnimation.value),
+          size: Size.infinite,
         );
       },
     );
   }
 
-  Widget _buildStatCard(
-      String title, String value, IconData icon, Color color) {
-    return ModernCard(
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: color, size: 20),
-            ),
-            const SizedBox(height: 8),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                value,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Flexible(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                ),
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 2,
-              ),
-            ),
-          ],
-        ),
+  void _toggleEmergencyMode() {
+    setState(() {
+      _isEmergencyMode = !_isEmergencyMode;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isEmergencyMode
+            ? 'MODO EMERGENCIA ACTIVADO'
+            : 'MODO EMERGENCIA DESACTIVADO'),
+        backgroundColor: _isEmergencyMode ? Colors.red : Colors.green,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
 
-  Widget _buildDistributionChart(Map<String, dynamic> stats) {
-    final prisonStats = stats['byPrison'] as Map<String, int>? ?? {};
-    final total = prisonStats.values.fold(0, (sum, count) => sum + count);
+  void _toggleLockdown() {
+    setState(() {
+      _isLockdownActive = !_isLockdownActive;
+    });
 
-    if (total == 0) {
-      return Container(
-        height: 200,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: const Center(
-          child: Text(
-            'No hay datos disponibles',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-            ),
-          ),
-        ),
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+            _isLockdownActive ? 'LOCKDOWN ACTIVADO' : 'LOCKDOWN DESACTIVADO'),
+        backgroundColor: _isLockdownActive ? Colors.orange : Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+}
+
+class BackgroundPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF00D4FF).withOpacity(0.1)
+      ..strokeWidth = 1;
+
+    // Dibujar líneas de cuadrícula
+    for (double i = 0; i < size.width; i += 50) {
+      canvas.drawLine(
+        Offset(i, 0),
+        Offset(i, size.height),
+        paint,
       );
     }
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Distribución por Centro',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 200,
-            child: PieChart(
-              PieChartData(
-                sections: prisonStats.entries.map((entry) {
-                  final percentage = total > 0 ? (entry.value / total) : 0.0;
-                  final color = _getPrisonColor(entry.key);
+    for (double i = 0; i < size.height; i += 50) {
+      canvas.drawLine(
+        Offset(0, i),
+        Offset(size.width, i),
+        paint,
+      );
+    }
+  }
 
-                  return PieChartSectionData(
-                    color: color,
-                    value: entry.value.toDouble(),
-                    title: '${(percentage * 100).toStringAsFixed(1)}%',
-                    radius: 60,
-                    titleStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  );
-                }).toList(),
-                centerSpaceRadius: 40,
-                sectionsSpace: 2,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 16,
-            runSpacing: 8,
-            children: prisonStats.entries.map((entry) {
-              return Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: _getPrisonColor(entry.key),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${entry.key}: ${entry.value}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              );
-            }).toList(),
-          ),
-        ],
-      ),
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class ScanLinePainter extends CustomPainter {
+  final double progress;
+
+  ScanLinePainter(this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF00D4FF).withOpacity(0.6)
+      ..strokeWidth = 2;
+
+    final y = size.height * progress;
+
+    // Línea de escaneo
+    canvas.drawLine(
+      Offset(0, y),
+      Offset(size.width, y),
+      paint,
+    );
+
+    // Efecto de brillo
+    final glowPaint = Paint()
+      ..color = const Color(0xFF00D4FF).withOpacity(0.3)
+      ..strokeWidth = 8
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+
+    canvas.drawLine(
+      Offset(0, y),
+      Offset(size.width, y),
+      glowPaint,
     );
   }
 
-  Color _getPrisonColor(String prisonName) {
-    final colors = [
-      const Color(0xFF17643A),
-      Colors.blue,
-      Colors.orange,
-      Colors.red,
-      Colors.purple,
-      Colors.teal,
-    ];
-
-    final index = prisonName.hashCode % colors.length;
-    return colors[index];
-  }
-
-  Widget _buildRecentActivity() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Actividad Reciente',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey[800],
-          ),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              _buildActivityItem(
-                'Nuevo recluso registrado en Malabo',
-                'Hace 2 horas',
-                Icons.person_add,
-                Colors.green,
-              ),
-              const Divider(height: 24),
-              _buildActivityItem(
-                'Alerta de seguridad activada en Bata',
-                'Hace 4 horas',
-                Icons.warning,
-                Colors.orange,
-              ),
-              const Divider(height: 24),
-              _buildActivityItem(
-                'Reporte mensual completado',
-                'Hace 6 horas',
-                Icons.assessment,
-                Colors.blue,
-              ),
-              const Divider(height: 24),
-              _buildActivityItem(
-                'Hospitalización registrada',
-                'Hace 8 horas',
-                Icons.local_hospital,
-                Colors.red,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActivityItem(
-      String title, String time, IconData icon, Color color) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: color, size: 20),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[800],
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                time,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[500],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

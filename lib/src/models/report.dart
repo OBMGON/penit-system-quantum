@@ -199,9 +199,10 @@ class Report {
 
   String get fileSizeText {
     if (fileSize == null) return 'N/A';
-    if (fileSize! < 1024) return '${fileSize} B';
-    if (fileSize! < 1024 * 1024)
+    if (fileSize! < 1024) return '$fileSize B';
+    if (fileSize! < 1024 * 1024) {
       return '${(fileSize! / 1024).toStringAsFixed(1)} KB';
+    }
     return '${(fileSize! / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 }
@@ -236,9 +237,10 @@ class ReportStatistics {
       totalReports > 0 ? completedReports / totalReports : 0.0;
   double get errorRate => totalReports > 0 ? errorReports / totalReports : 0.0;
   String get totalFileSizeText {
-    if (totalFileSize < 1024) return '${totalFileSize} B';
-    if (totalFileSize < 1024 * 1024)
+    if (totalFileSize < 1024) return '$totalFileSize B';
+    if (totalFileSize < 1024 * 1024) {
       return '${(totalFileSize / 1024).toStringAsFixed(1)} KB';
+    }
     return '${(totalFileSize / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 }

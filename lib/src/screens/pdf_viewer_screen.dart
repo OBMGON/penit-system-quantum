@@ -9,10 +9,10 @@ class PDFViewerScreen extends StatefulWidget {
   final bool isDirector;
 
   const PDFViewerScreen({
-    Key? key,
+    super.key,
     required this.document,
     required this.isDirector,
-  }) : super(key: key);
+  });
 
   @override
   State<PDFViewerScreen> createState() => _PDFViewerScreenState();

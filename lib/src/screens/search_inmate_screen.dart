@@ -6,7 +6,6 @@ import '../models/administrative.dart';
 import '../widgets/modern_button.dart';
 import '../widgets/modern_card.dart';
 import '../theme/app_theme.dart';
-import '../services/pdf_service.dart';
 import '../services/feedback_service.dart';
 
 class SearchInmateScreen extends StatefulWidget {
