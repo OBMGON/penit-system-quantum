@@ -124,22 +124,12 @@ class _SplashScreenState extends State<SplashScreen>
   void _navigateNext() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
 
-    // TEMPORAL: Forzar login como Director General para testing
-    if (!auth.isLoggedIn) {
-      try {
-        // Simular login como Director General
-        await auth.login('Isacio97', '1234', 'Director General');
-      } catch (e) {
-        // Si falla el login, ir a la pantalla de login
-        Navigator.of(context).pushReplacementNamed('/login');
-        return;
-      }
-    }
-
+    // Verificar si ya está logueado
     if (auth.isLoggedIn && auth.role != null) {
-      // Navegar directamente a la gestión de alimentos para testing
-      Navigator.of(context).pushReplacementNamed('/food-management');
+      // Si ya está logueado, ir al workspace correspondiente
+      Navigator.of(context).pushReplacementNamed('/main');
     } else {
+      // Si no está logueado, ir a la pantalla de login
       Navigator.of(context).pushReplacementNamed('/login');
     }
   }

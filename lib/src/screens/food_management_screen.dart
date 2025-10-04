@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/food_management_provider.dart';
-import '../models/food_management.dart';
-import '../widgets/modern_card.dart';
 import 'package:intl/intl.dart';
-import '../theme/app_theme.dart';
 
 class FoodManagementScreen extends StatefulWidget {
   const FoodManagementScreen({super.key});
@@ -71,7 +68,7 @@ class _FoodManagementScreenState extends State<FoodManagementScreen>
     return Consumer<FoodManagementProvider>(
       builder: (context, provider, child) {
         final stats = provider.getExecutiveStats();
-        
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -199,7 +196,8 @@ class _FoodManagementScreenState extends State<FoodManagementScreen>
     );
   }
 
-  Widget _buildSummaryCard(String title, String value, IconData icon, Color color) {
+  Widget _buildSummaryCard(
+      String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -245,7 +243,7 @@ class _FoodManagementScreenState extends State<FoodManagementScreen>
 
   Widget _buildCenterSummary(FoodManagementProvider provider) {
     final centers = provider.getCenterSummaries();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -259,77 +257,83 @@ class _FoodManagementScreenState extends State<FoodManagementScreen>
         ),
         const SizedBox(height: 16),
         ...centers.map((center) => Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[300]!),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.location_city,
-                    color: Colors.blue[700],
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      center['name'],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: center['status'] == 'OK' 
-                          ? Colors.green.withOpacity(0.1)
-                          : Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      center['status'],
-                      style: TextStyle(
-                        color: center['status'] == 'OK' ? Colors.green : Colors.red,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[300]!),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: _buildCenterMetric('Presupuesto', formatXAF(center['budget'])),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_city,
+                        color: Colors.blue[700],
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          center['name'],
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: center['status'] == 'OK'
+                              ? Colors.green.withOpacity(0.1)
+                              : Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          center['status'],
+                          style: TextStyle(
+                            color: center['status'] == 'OK'
+                                ? Colors.green
+                                : Colors.red,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  Expanded(
-                    child: _buildCenterMetric('Gasto', formatXAF(center['expense'])),
-                  ),
-                  Expanded(
-                    child: _buildCenterMetric('Reclusos', '${center['inmates']}'),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildCenterMetric(
+                            'Presupuesto', formatXAF(center['budget'])),
+                      ),
+                      Expanded(
+                        child: _buildCenterMetric(
+                            'Gasto', formatXAF(center['expense'])),
+                      ),
+                      Expanded(
+                        child: _buildCenterMetric(
+                            'Reclusos', '${center['inmates']}'),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
-        )),
+            )),
       ],
     );
   }
@@ -360,7 +364,7 @@ class _FoodManagementScreenState extends State<FoodManagementScreen>
     return Consumer<FoodManagementProvider>(
       builder: (context, provider, child) {
         final expenses = provider.getExpenseDetails();
-        
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -466,7 +470,7 @@ class _FoodManagementScreenState extends State<FoodManagementScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: expense['status'] == 'Aprobado' 
+                  color: expense['status'] == 'Aprobado'
                       ? Colors.green.withOpacity(0.1)
                       : Colors.orange.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -474,7 +478,9 @@ class _FoodManagementScreenState extends State<FoodManagementScreen>
                 child: Text(
                   expense['status'],
                   style: TextStyle(
-                    color: expense['status'] == 'Aprobado' ? Colors.green : Colors.orange,
+                    color: expense['status'] == 'Aprobado'
+                        ? Colors.green
+                        : Colors.orange,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
@@ -508,7 +514,7 @@ class _FoodManagementScreenState extends State<FoodManagementScreen>
     return Consumer<FoodManagementProvider>(
       builder: (context, provider, child) {
         final reports = provider.getMonthlyReports();
-        
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -580,7 +586,7 @@ class _FoodManagementScreenState extends State<FoodManagementScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: report['status'] == 'Aprobado' 
+                  color: report['status'] == 'Aprobado'
                       ? Colors.green.withOpacity(0.1)
                       : Colors.orange.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -588,7 +594,9 @@ class _FoodManagementScreenState extends State<FoodManagementScreen>
                 child: Text(
                   report['status'],
                   style: TextStyle(
-                    color: report['status'] == 'Aprobado' ? Colors.green : Colors.orange,
+                    color: report['status'] == 'Aprobado'
+                        ? Colors.green
+                        : Colors.orange,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
@@ -600,13 +608,16 @@ class _FoodManagementScreenState extends State<FoodManagementScreen>
           Row(
             children: [
               Expanded(
-                child: _buildReportMetric('Presupuesto', formatXAF(report['budget'])),
+                child: _buildReportMetric(
+                    'Presupuesto', formatXAF(report['budget'])),
               ),
               Expanded(
-                child: _buildReportMetric('Gasto Real', formatXAF(report['expense'])),
+                child: _buildReportMetric(
+                    'Gasto Real', formatXAF(report['expense'])),
               ),
               Expanded(
-                child: _buildReportMetric('Diferencia', formatXAF(report['difference'])),
+                child: _buildReportMetric(
+                    'Diferencia', formatXAF(report['difference'])),
               ),
             ],
           ),

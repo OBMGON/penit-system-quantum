@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/prisoner_provider.dart';
-import '../providers/alert_provider.dart';
-import '../providers/report_provider.dart';
 
 class DirectorWorkspaceScreen extends StatefulWidget {
   const DirectorWorkspaceScreen({super.key});
@@ -655,7 +651,7 @@ class _DirectorWorkspaceScreenState extends State<DirectorWorkspaceScreen>
                   'Nuevos reclusos',
                   'Documentación inicial',
                   Colors.blue,
-                  () => Navigator.pushNamed(context, '/inmate-registration'),
+                  () => Navigator.pushNamed(context, '/register'),
                 ),
                 _buildFunctionCard(
                   'VER DOCUMENTOS',
@@ -679,7 +675,7 @@ class _DirectorWorkspaceScreenState extends State<DirectorWorkspaceScreen>
                   'Solicitud de cancelación',
                   'Limpieza de expediente',
                   Colors.teal,
-                  () => Navigator.pushNamed(context, '/record-cancellation'),
+                  () => Navigator.pushNamed(context, '/cancellation-request'),
                 ),
                 _buildFunctionCard(
                   'ESCANER INTELIGENTE',
@@ -687,7 +683,7 @@ class _DirectorWorkspaceScreenState extends State<DirectorWorkspaceScreen>
                   'Escanear documentos',
                   'Guardar en sistema',
                   Colors.indigo,
-                  () => Navigator.pushNamed(context, '/scanner'),
+                  () => Navigator.pushNamed(context, '/smart-scanner'),
                 ),
               ],
             );
@@ -862,15 +858,10 @@ class _DirectorWorkspaceScreenState extends State<DirectorWorkspaceScreen>
                 ),
               ),
               onSubmitted: (value) {
-                if (value.isNotEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Buscando: $value'),
-                      backgroundColor: const Color(0xFF00D4FF),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                }
+                if (value.trim().isEmpty) return;
+                Navigator.pushNamed(context, '/search', arguments: {
+                  'query': value.trim(),
+                });
               },
             ),
           ),
@@ -891,13 +882,15 @@ class _DirectorWorkspaceScreenState extends State<DirectorWorkspaceScreen>
   Widget _buildSearchFilter(String label, IconData icon) {
     return GestureDetector(
       onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Filtrar por: $label'),
-            backgroundColor: const Color(0xFF00D4FF),
-            duration: const Duration(seconds: 1),
-          ),
-        );
+        if (label == 'Reclusos') {
+          Navigator.pushNamed(context, '/search',
+              arguments: {'filter': 'inmates'});
+        } else if (label == 'Documentos') {
+          Navigator.pushNamed(context, '/documents');
+        } else {
+          Navigator.pushNamed(context, '/search',
+              arguments: {'filter': 'files'});
+        }
       },
       child: MouseRegion(
         cursor: SystemMouseCursors.click,

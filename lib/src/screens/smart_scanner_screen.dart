@@ -41,7 +41,7 @@ class _SmartScannerScreenState extends State<SmartScannerScreen> {
           ),
         ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -392,6 +392,9 @@ class _SmartScannerScreenState extends State<SmartScannerScreen> {
           _ocrResult = null;
           _error = null;
         });
+
+        // Procesar automáticamente después de seleccionar
+        await _processDocument();
       }
     } catch (e) {
       setState(() {
@@ -414,6 +417,9 @@ class _SmartScannerScreenState extends State<SmartScannerScreen> {
           _ocrResult = null;
           _error = null;
         });
+
+        // Procesar automáticamente después de seleccionar
+        await _processDocument();
       }
     } catch (e) {
       setState(() {
@@ -431,12 +437,31 @@ class _SmartScannerScreenState extends State<SmartScannerScreen> {
     });
 
     try {
+      // Simular delay de procesamiento
+      await Future.delayed(const Duration(seconds: 2));
+
       final result = await OCRService.processDocumentSimulated(_selectedImage!);
 
-      setState(() {
-        _ocrResult = result;
-        _isProcessing = false;
-      });
+      if (result['success'] == true) {
+        setState(() {
+          _ocrResult = result;
+          _isProcessing = false;
+        });
+
+        // Mostrar mensaje de éxito
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Documento procesado: ${result['documentType']}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      } else {
+        setState(() {
+          _error = result['error'] ?? 'Error desconocido al procesar documento';
+          _isProcessing = false;
+        });
+      }
     } catch (e) {
       setState(() {
         _error = 'Error al procesar documento: $e';
@@ -453,13 +478,48 @@ class _SmartScannerScreenState extends State<SmartScannerScreen> {
     });
   }
 
-  void _sendDocument() {
+  Future<void> _sendDocument() async {
     if (_ocrResult == null || _selectedImage == null) return;
+
+    // Guardar documento en el sistema
+    await _saveDocumentToSystem();
 
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => const SendDocumentScreen(),
+      ),
+    );
+  }
+
+  Future<void> _saveDocumentToSystem() async {
+    if (_selectedImage == null || _ocrResult == null) return;
+
+    // Crear documento para guardar en el sistema
+    final document = {
+      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'title': 'Documento Escaneado - ${_ocrResult!['documentType']}',
+      'type': 'PDF',
+      'size': '${await _selectedImage!.length()} bytes',
+      'date':
+          '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}',
+      'author': 'Director General',
+      'category': _ocrResult!['category'] ?? 'General',
+      'priority': 'Alta',
+      'description': 'Documento escaneado con escáner inteligente',
+      'hasImage': true,
+      'isScanned': true,
+      'imageData': null, // Se cargará cuando se necesite
+      'fileName': _selectedImage!.name,
+      'ocrResult': _ocrResult,
+    };
+
+    // Aquí se guardaría en la base de datos del sistema
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('✅ Documento guardado en ${_ocrResult!['category']}'),
+        backgroundColor: Colors.blue,
+        duration: const Duration(seconds: 3),
       ),
     );
   }

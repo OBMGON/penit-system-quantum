@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/digital_document_provider.dart';
-import '../models/digital_document.dart';
-import '../widgets/modern_button.dart';
-import '../providers/auth_provider.dart'; // Added import for AuthProvider
-import '../screens/pdf_viewer_screen.dart'; // Added import for PDFViewerScreen
+import 'package:image_picker/image_picker.dart';
+import 'dart:typed_data';
 
 class DigitalDocumentsScreen extends StatefulWidget {
   const DigitalDocumentsScreen({super.key});
@@ -13,134 +9,258 @@ class DigitalDocumentsScreen extends StatefulWidget {
   State<DigitalDocumentsScreen> createState() => _DigitalDocumentsScreenState();
 }
 
-class _DigitalDocumentsScreenState extends State<DigitalDocumentsScreen>
-    with TickerProviderStateMixin {
+class _DigitalDocumentsScreenState extends State<DigitalDocumentsScreen> {
   final TextEditingController _searchController = TextEditingController();
-  late AnimationController _aiController;
-  late AnimationController _voiceController;
-  late AnimationController _pulseController;
-  late AnimationController _slideController;
+  String _selectedCategory = 'Todos';
+  String _searchQuery = '';
 
-  bool _isListening = false;
-  bool _showAIInsights = false;
-  bool _showQuickActions = false;
-  bool _showVoiceCommands = false;
-  final String _voiceQuery = '';
-  String _currentCommand = '';
-
-  // Estados de gestos
-  bool _isDragging = false;
-  Offset _dragOffset = Offset.zero;
-
-  // Estados de procesamiento
-  bool _isProcessingDocument = false;
-  String _processingStatus = '';
-  Map<String, dynamic>? _lastProcessedDocument;
-
-  // Comandos de voz disponibles
-  final List<Map<String, dynamic>> _voiceCommands = [
-    {
-      'command': 'mostrar críticos',
-      'action': 'filter_critical',
-      'description': 'Filtrar documentos críticos',
-      'icon': Icons.warning,
-    },
-    {
-      'command': 'mostrar gastos',
-      'action': 'filter_expenses',
-      'description': 'Mostrar solo gastos',
-      'icon': Icons.account_balance_wallet,
-    },
-    {
-      'command': 'mostrar contratos',
-      'action': 'filter_contracts',
-      'description': 'Filtrar contratos',
-      'icon': Icons.description,
-    },
-    {
-      'command': 'subir documento',
-      'action': 'upload_document',
-      'description': 'Abrir subida de documentos',
-      'icon': Icons.upload_file,
-    },
-    {
-      'command': 'análisis completo',
-      'action': 'full_analysis',
-      'description': 'Ejecutar análisis completo',
-      'icon': Icons.analytics,
-    },
+  // Categorías de documentos
+  final List<String> _categories = [
+    'Todos',
+    'Administrativos',
+    'Médicos',
+    'Legales',
+    'Financieros',
+    'Seguridad',
+    'Personal',
+    'Alimentación',
   ];
 
-  // Acciones rápidas
-  final List<Map<String, dynamic>> _quickActions = [
-    {
-      'title': '📸 Escanear',
-      'action': 'scan',
-      'color': Colors.blue,
-      'icon': Icons.camera_alt,
-    },
-    {
-      'title': '🎤 Voz',
-      'action': 'voice',
-      'color': Colors.purple,
-      'icon': Icons.mic,
-    },
-    {
-      'title': '🤖 IA',
-      'action': 'ai',
-      'color': Colors.green,
-      'icon': Icons.psychology,
-    },
-    {
-      'title': '📊 Análisis',
-      'action': 'analytics',
-      'color': Colors.orange,
-      'icon': Icons.analytics,
-    },
-  ];
+  // Documentos con imágenes reales (base64 o archivos locales)
+  final Map<String, List<Map<String, dynamic>>> _documentsByCategory = {
+    'Administrativos': [
+      {
+        'id': '1',
+        'title': 'Reglamento Interno 2025',
+        'type': 'PDF',
+        'size': '2.3 MB',
+        'date': '2025-01-15',
+        'author': 'Director General',
+        'category': 'Administrativos',
+        'priority': 'Alta',
+        'description':
+            'Reglamento interno actualizado del sistema penitenciario',
+        'hasImage': true,
+        'isScanned': true,
+        'imageData': null, // Se cargará dinámicamente
+        'imagePath': 'assets/images/documents/reglamento_interno.jpg',
+      },
+      {
+        'id': '2',
+        'title': 'Protocolo de Seguridad',
+        'type': 'PDF',
+        'size': '1.8 MB',
+        'date': '2025-01-10',
+        'author': 'Jefe de Seguridad',
+        'category': 'Administrativos',
+        'priority': 'Alta',
+        'description': 'Protocolos de seguridad actualizados',
+        'hasImage': true,
+        'isScanned': true,
+        'imageData': null,
+        'imagePath': 'assets/images/documents/protocolo_seguridad.jpg',
+      },
+    ],
+    'Médicos': [
+      {
+        'id': '3',
+        'title': 'Informe Médico Mensual',
+        'type': 'PDF',
+        'size': '856 KB',
+        'date': '2025-01-20',
+        'author': 'Dr. María González',
+        'category': 'Médicos',
+        'priority': 'Media',
+        'description': 'Informe médico del mes de enero 2025',
+        'hasImage': true,
+        'isScanned': true,
+        'imageData': null,
+        'imagePath': 'assets/images/documents/informe_medico.jpg',
+      },
+      {
+        'id': '4',
+        'title': 'Lista de Medicamentos',
+        'type': 'Excel',
+        'size': '245 KB',
+        'date': '2025-01-18',
+        'author': 'Farmacia Central',
+        'category': 'Médicos',
+        'priority': 'Alta',
+        'description': 'Inventario de medicamentos disponibles',
+        'hasImage': false,
+        'isScanned': false,
+        'imageData': null,
+      },
+    ],
+    'Legales': [
+      {
+        'id': '5',
+        'title': 'Solicitud de Libertad Condicional',
+        'type': 'PDF',
+        'size': '1.2 MB',
+        'date': '2025-01-22',
+        'author': 'Abogado Defensor',
+        'category': 'Legales',
+        'priority': 'Alta',
+        'description': 'Solicitud de libertad condicional para recluso #12345',
+        'hasImage': true,
+        'isScanned': true,
+        'imageData': null,
+        'imagePath': 'assets/images/documents/solicitud_libertad.jpg',
+      },
+      {
+        'id': '6',
+        'title': 'Acta de Visita Familiar',
+        'type': 'PDF',
+        'size': '567 KB',
+        'date': '2025-01-21',
+        'author': 'Oficial de Visitas',
+        'category': 'Legales',
+        'priority': 'Media',
+        'description': 'Registro de visitas familiares del fin de semana',
+        'hasImage': true,
+        'isScanned': true,
+        'imageData': null,
+        'imagePath': 'assets/images/documents/acta_visita.jpg',
+      },
+    ],
+    'Financieros': [
+      {
+        'id': '7',
+        'title': 'Presupuesto Mensual',
+        'type': 'Excel',
+        'size': '1.5 MB',
+        'date': '2025-01-01',
+        'author': 'Contabilidad',
+        'category': 'Financieros',
+        'priority': 'Alta',
+        'description': 'Presupuesto mensual detallado del sistema',
+        'hasImage': false,
+        'isScanned': false,
+        'imageData': null,
+      },
+      {
+        'id': '8',
+        'title': 'Facturas de Suministros',
+        'type': 'PDF',
+        'size': '3.2 MB',
+        'date': '2025-01-19',
+        'author': 'Compras',
+        'category': 'Financieros',
+        'priority': 'Media',
+        'description': 'Facturas de suministros del mes',
+        'hasImage': true,
+        'isScanned': true,
+        'imageData': null,
+        'imagePath': 'assets/images/documents/facturas_suministros.jpg',
+      },
+    ],
+    'Seguridad': [
+      {
+        'id': '9',
+        'title': 'Informe de Incidentes',
+        'type': 'PDF',
+        'size': '789 KB',
+        'date': '2025-01-23',
+        'author': 'Oficial de Seguridad',
+        'category': 'Seguridad',
+        'priority': 'Alta',
+        'description': 'Informe de incidentes de seguridad',
+        'hasImage': true,
+        'isScanned': true,
+        'imageData': null,
+        'imagePath': 'assets/images/documents/informe_incidentes.jpg',
+      },
+    ],
+    'Personal': [
+      {
+        'id': '10',
+        'title': 'Nómina de Personal',
+        'type': 'Excel',
+        'size': '2.1 MB',
+        'date': '2025-01-25',
+        'author': 'Recursos Humanos',
+        'category': 'Personal',
+        'priority': 'Alta',
+        'description': 'Nómina del personal penitenciario',
+        'hasImage': false,
+        'isScanned': false,
+        'imageData': null,
+      },
+    ],
+    'Alimentación': [
+      {
+        'id': '11',
+        'title': 'Menú Semanal',
+        'type': 'PDF',
+        'size': '456 KB',
+        'date': '2025-01-20',
+        'author': 'Cocina Central',
+        'category': 'Alimentación',
+        'priority': 'Media',
+        'description': 'Menú semanal de alimentación',
+        'hasImage': true,
+        'isScanned': true,
+        'imageData': null,
+        'imagePath': 'assets/images/documents/menu_semanal.jpg',
+      },
+      {
+        'id': '12',
+        'title': 'Inventario de Alimentos',
+        'type': 'Excel',
+        'size': '678 KB',
+        'date': '2025-01-24',
+        'author': 'Almacén',
+        'category': 'Alimentación',
+        'priority': 'Media',
+        'description': 'Inventario actualizado de alimentos',
+        'hasImage': false,
+        'isScanned': false,
+        'imageData': null,
+      },
+    ],
+  };
 
-  @override
-  void initState() {
-    super.initState();
-    _initializeAnimations();
-    // NO cargar documentos automáticamente - solo cuando el usuario escanee
-  }
+  // Lista de documentos subidos por el usuario
+  final List<Map<String, dynamic>> _uploadedDocuments = [];
 
-  void _initializeAnimations() {
-    _aiController = AnimationController(
-      duration: const Duration(milliseconds: 2000),
-      vsync: this,
-    );
-    _voiceController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    );
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    );
-    _slideController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
+  List<Map<String, dynamic>> get _filteredDocuments {
+    List<Map<String, dynamic>> allDocs = [];
 
-    _aiController.repeat();
-    _pulseController.repeat(reverse: true);
-  }
+    // Agregar documentos del sistema
+    if (_selectedCategory == 'Todos') {
+      for (var docs in _documentsByCategory.values) {
+        allDocs.addAll(docs);
+      }
+    } else {
+      allDocs = _documentsByCategory[_selectedCategory] ?? [];
+    }
 
-  void _loadDocuments() {
-    // Cargar documentos existentes
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<DigitalDocumentProvider>().loadDocuments();
-    });
+    // Agregar documentos subidos por el usuario
+    allDocs.addAll(_uploadedDocuments);
+
+    if (_searchQuery.isNotEmpty) {
+      allDocs = allDocs.where((doc) {
+        return doc['title']
+                .toString()
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase()) ||
+            doc['description']
+                .toString()
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase()) ||
+            doc['author']
+                .toString()
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase());
+      }).toList();
+    }
+
+    return allDocs;
   }
 
   @override
   void dispose() {
-    _aiController.dispose();
-    _voiceController.dispose();
-    _pulseController.dispose();
-    _slideController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -148,1829 +268,1060 @@ class _DigitalDocumentsScreenState extends State<DigitalDocumentsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0E21),
-      body: Stack(
-        children: [
-          // Contenido principal
-          CustomScrollView(
-            slivers: [
-              _buildFuturisticHeader(),
-              _buildQuickActionsPanel(),
-              _buildVoiceCommandsPanel(),
-              _buildAIPanel(),
-              _buildMainContent(),
-            ],
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text(
+          'GESTIÓN DE DOCUMENTOS',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
           ),
-
-          // Overlay de comandos de voz
-          if (_showVoiceCommands) _buildVoiceCommandsOverlay(),
-
-          // Overlay de drag & drop
-          if (_isDragging) _buildDragOverlay(),
-
-          // Overlay de procesamiento
-          if (_isProcessingDocument) _buildProcessingOverlay(),
+        ),
+        backgroundColor: Colors.blue[700],
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.print),
+            onPressed: () => _showPrintOptions(),
+            tooltip: 'Imprimir',
+          ),
+          IconButton(
+            icon: const Icon(Icons.download),
+            onPressed: () => _showDownloadOptions(),
+            tooltip: 'Descargar',
+          ),
+          IconButton(
+            icon: const Icon(Icons.camera_alt),
+            onPressed: () => _showScanDocumentDialog(),
+            tooltip: 'Escanear Documento',
+          ),
         ],
       ),
-      floatingActionButton: _buildFloatingActionButton(),
-    );
-  }
-
-  Widget _buildFuturisticHeader() {
-    return SliverToBoxAdapter(
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [
-              Color(0xFF1A1A2E),
-              Color(0xFF16213E),
-              Color(0xFF0F3460),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      body: Column(
+        children: [
+          _buildSearchAndFilterSection(),
+          _buildCategoryTabs(),
+          Expanded(
+            child: _buildDocumentsList(),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.blue.withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header con navegación y controles
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.arrow_back, color: Colors.white),
-                  ),
-                ),
-                const Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'AI Document Hub',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                  ),
-                ),
-                _buildControlButton(
-                  icon: Icons.touch_app,
-                  onTap: () =>
-                      setState(() => _showQuickActions = !_showQuickActions),
-                  isActive: _showQuickActions,
-                ),
-                const SizedBox(width: 8),
-                _buildControlButton(
-                  icon: Icons.mic,
-                  onTap: () =>
-                      setState(() => _showVoiceCommands = !_showVoiceCommands),
-                  isActive: _showVoiceCommands,
-                ),
-                const SizedBox(width: 8),
-                _buildControlButton(
-                  icon: Icons.psychology,
-                  onTap: () =>
-                      setState(() => _showAIInsights = !_showAIInsights),
-                  isActive: _showAIInsights,
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            // Barra de comandos de voz
-            _buildVoiceCommandBar(),
-          ],
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildControlButton(
-      {required IconData icon,
-      required VoidCallback onTap,
-      required bool isActive}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isActive
-                ? [Colors.purple, Colors.blue]
-                : [Colors.grey.withOpacity(0.3), Colors.grey.withOpacity(0.1)],
-          ),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isActive ? Colors.purple : Colors.grey.withOpacity(0.5),
-          ),
-        ),
-        child: Icon(
-          icon,
-          color: isActive ? Colors.white : Colors.grey,
-          size: 20,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVoiceCommandBar() {
+  Widget _buildSearchAndFilterSection() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.blue.withOpacity(0.2),
-            Colors.purple.withOpacity(0.2),
-          ],
+        color: Colors.grey[50],
+        border: Border(
+          bottom: BorderSide(color: Colors.grey[300]!),
         ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.blue.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: _toggleVoiceSearch,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _isListening ? Colors.red : Colors.blue,
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: [
-                  BoxShadow(
-                    color: (_isListening ? Colors.red : Colors.blue)
-                        .withOpacity(0.3),
-                    blurRadius: _isListening ? 15 : 8,
-                    spreadRadius: _isListening ? 2 : 0,
-                  ),
-                ],
-              ),
-              child: Icon(
-                _isListening ? Icons.stop : Icons.mic,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              _isListening
-                  ? 'Escuchando... Di un comando'
-                  : 'Toca el micrófono y di un comando',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-              ),
-            ),
-          ),
-          if (_currentCommand.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _currentCommand,
-                style: const TextStyle(
-                  color: Colors.green,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionsPanel() {
-    if (!_showQuickActions) {
-      return const SliverToBoxAdapter(child: SizedBox.shrink());
-    }
-
-    return SliverToBoxAdapter(
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        margin: const EdgeInsets.all(20),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.white.withOpacity(0.1),
-              Colors.white.withOpacity(0.05),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Acciones Rápidas',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: _quickActions
-                  .map((action) => Expanded(
-                        child: GestureDetector(
-                          onTap: () => _executeQuickAction(action['action']),
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  action['color'].withOpacity(0.3),
-                                  action['color'].withOpacity(0.1),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color: action['color'].withOpacity(0.3)),
-                            ),
-                            child: Column(
-                              children: [
-                                Icon(action['icon'],
-                                    color: action['color'], size: 24),
-                                const SizedBox(height: 8),
-                                Text(
-                                  action['title'],
-                                  style: TextStyle(
-                                    color: action['color'],
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ))
-                  .toList(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVoiceCommandsPanel() {
-    if (!_showVoiceCommands) {
-      return const SliverToBoxAdapter(child: SizedBox.shrink());
-    }
-
-    return SliverToBoxAdapter(
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        margin: const EdgeInsets.all(20),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.purple.withOpacity(0.2),
-              Colors.blue.withOpacity(0.2),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.purple.withOpacity(0.3)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.mic, color: Colors.purple, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  'Comandos de Voz',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ..._voiceCommands.map((command) => _buildVoiceCommandItem(command)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVoiceCommandItem(Map<String, dynamic> command) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(command['icon'], color: Colors.purple, size: 16),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '"${command['command']}"',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                Text(
-                  command['description'],
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAIPanel() {
-    if (!_showAIInsights) {
-      return const SliverToBoxAdapter(child: SizedBox.shrink());
-    }
-
-    return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                AnimatedBuilder(
-                  animation: _aiController,
-                  builder: (context, child) {
-                    return Transform.rotate(
-                      angle: _aiController.value * 2 * 3.14159,
-                      child: const Icon(
-                        Icons.psychology,
-                        color: Colors.purple,
-                        size: 24,
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'AI Insights',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Panel de procesamiento reciente
-            if (_lastProcessedDocument != null) _buildProcessingResultCard(),
-
-            _buildAIInsightCard(
-              '⚠️ Documento Crítico',
-              'Presupuesto 2026 requiere aprobación inmediata',
-              'Alta',
-              Colors.red,
-              () => _showCriticalDocument(),
-            ),
-            _buildAIInsightCard(
-              '📊 Análisis de Gastos',
-              'Gastos mensuales 15% sobre presupuesto',
-              'Media',
-              Colors.orange,
-              () => _showExpenseAnalysis(),
-            ),
-            _buildAIInsightCard(
-              '🤖 IA Recomienda',
-              '3 contratos próximos a vencer',
-              'Baja',
-              Colors.blue,
-              () => _showContractAnalysis(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProcessingResultCard() {
-    final doc = _lastProcessedDocument!;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.green.withOpacity(0.3),
-            Colors.blue.withOpacity(0.2),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green.withOpacity(0.5)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.green, size: 24),
-              const SizedBox(width: 8),
-              const Text(
-                'Documento Procesado Exitosamente',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text(
-                  'NUEVO',
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _buildProcessingDetail(
-              'Tipo detectado', doc['type'] ?? 'Desconocido'),
-          _buildProcessingDetail(
-              'Monto extraído', doc['amount'] ?? 'No detectado'),
-          _buildProcessingDetail('Empresa', doc['company'] ?? 'No detectada'),
-          _buildProcessingDetail('Fecha', doc['date'] ?? 'No detectada'),
-          _buildProcessingDetail(
-              'Prioridad asignada', doc['priority'] ?? 'Media'),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: ModernButton(
-                  text: 'Ver Documento',
-                  icon: Icons.visibility,
-                  onPressed: () {
-                    // Obtener el documento real del provider
-                    final documents = context
-                        .read<DigitalDocumentProvider>()
-                        .filteredDocuments;
-                    final realDocument = documents.firstWhere(
-                      (document) => document.title == doc['title'],
-                      orElse: () => documents.first,
-                    );
-
-                    final authProvider = context.read<AuthProvider>();
-                    final isDirector = authProvider.role == 'Director General';
-
-                    // Abrir el visor PDF directamente
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PDFViewerScreen(
-                          document: realDocument,
-                          isDirector: isDirector,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ModernButton(
-                  text: 'Escanear Otro',
-                  icon: Icons.camera_alt,
-                  onPressed: () => _executeQuickAction('scan'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProcessingDetail(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              '$label:',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAIInsightCard(String title, String message, String priority,
-      Color color, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              color.withOpacity(0.2),
-              color.withOpacity(0.1),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
+          // Barra de búsqueda
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Buscar documentos...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {
+                          _searchQuery = '';
+                        });
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey[300]!),
               ),
-              child: Icon(
-                Icons.info,
-                color: color,
-                size: 20,
-              ),
+              filled: true,
+              fillColor: Colors.white,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    message,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                priority,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMainContent() {
-    return Consumer<DigitalDocumentProvider>(
-      builder: (context, provider, child) {
-        if (provider.isLoading) {
-          return const SliverFillRemaining(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: Colors.blue),
-                  SizedBox(height: 16),
-                  Text(
-                    'Cargando documentos...',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
-        final documents = provider.filteredDocuments;
-
-        if (documents.isEmpty) {
-          return SliverFillRemaining(
-            child: _buildEmptyState(),
-          );
-        }
-
-        return SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              final document = documents[index];
-              return _buildDocumentCard(document, provider);
-            },
-            childCount: documents.length,
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.blue.withOpacity(0.3),
-                  Colors.purple.withOpacity(0.3),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(60),
-            ),
-            child: const Icon(
-              Icons.cloud_upload,
-              size: 60,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'No hay documentos',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Usa los comandos de voz o las acciones rápidas',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.white70,
-            ),
-          ),
-          const SizedBox(height: 32),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ModernButton(
-                text: '📸 Escanear',
-                icon: Icons.camera_alt,
-                onPressed: () => _executeQuickAction('scan'),
-              ),
-              const SizedBox(width: 16),
-              ModernButton(
-                text: '🎤 Voz',
-                icon: Icons.mic,
-                onPressed: () => setState(() => _showVoiceCommands = true),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDocumentCard(
-      DigitalDocument document, DigitalDocumentProvider provider) {
-    return GestureDetector(
-      onLongPress: () => _startDrag(document),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Colors.white.withOpacity(0.1),
-                Colors.white.withOpacity(0.05),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
-          ),
-          child: InkWell(
-            onTap: () => _showDocumentDetails(document),
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _getDocumentTypeColor(document.documentType)
-                              .withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          document.documentType.displayName,
-                          style: TextStyle(
-                            color: _getDocumentTypeColor(document.documentType),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      _buildPriorityBadge(document.priority),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    document.title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (document.description.isNotEmpty)
-                    Text(
-                      document.description,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                    ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      if (document.montoTotal != null &&
-                          document.montoTotal! > 0) ...[
-                        const Icon(Icons.account_balance_wallet,
-                            size: 16, color: Colors.green),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${document.montoTotal!.toStringAsFixed(0)} XAF',
-                          style: const TextStyle(
-                            color: Colors.green,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                      ],
-                      if (document.empresasInvolucradas?.isNotEmpty ==
-                          true) ...[
-                        const Icon(Icons.business,
-                            size: 16, color: Colors.blue),
-                        const SizedBox(width: 4),
-                        Text(
-                          document.empresasInvolucradas!.first,
-                          style: const TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      const Icon(Icons.access_time,
-                          size: 14, color: Colors.white60),
-                      const SizedBox(width: 4),
-                      Text(
-                        _formatDate(document.uploadedAt),
-                        style: const TextStyle(
-                          color: Colors.white60,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const Spacer(),
-                      if (provider.canDeleteDocument(document))
-                        IconButton(
-                          onPressed: () => _confirmDelete(document),
-                          icon: const Icon(Icons.delete,
-                              size: 20, color: Colors.red),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPriorityBadge(DocumentPriority priority) {
-    Color color;
-    IconData icon;
-
-    switch (priority) {
-      case DocumentPriority.critico:
-        color = Colors.red;
-        icon = Icons.priority_high;
-        break;
-      case DocumentPriority.alto:
-        color = Colors.orange;
-        icon = Icons.trending_up;
-        break;
-      case DocumentPriority.medio:
-        color = Colors.blue;
-        icon = Icons.remove;
-        break;
-      case DocumentPriority.bajo:
-        color = Colors.green;
-        icon = Icons.trending_down;
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: color),
-          const SizedBox(width: 2),
-          Text(
-            priority.name.toUpperCase(),
-            style: TextStyle(
-              color: color,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFloatingActionButton() {
-    return Consumer<DigitalDocumentProvider>(
-      builder: (context, provider, child) {
-        if (!provider.canUploadDocuments) return const SizedBox.shrink();
-
-        return FloatingActionButton.extended(
-          onPressed: _showUploadDialog,
-          backgroundColor: Colors.blue,
-          icon: const Icon(Icons.upload_file, color: Colors.white),
-          label: const Text(
-            'Subir Documento',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildVoiceCommandsOverlay() {
-    return Container(
-      color: Colors.black.withOpacity(0.8),
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Colors.purple.withOpacity(0.9),
-                Colors.blue.withOpacity(0.9),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.mic, color: Colors.white, size: 48),
-              const SizedBox(height: 16),
-              const Text(
-                'Comandos Disponibles',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 24),
-              ..._voiceCommands
-                  .map((command) => _buildOverlayCommandItem(command)),
-              const SizedBox(height: 24),
-              ModernButton(
-                text: 'Cerrar',
-                onPressed: () => setState(() => _showVoiceCommands = false),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOverlayCommandItem(Map<String, dynamic> command) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(command['icon'], color: Colors.white, size: 24),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '"${command['command']}"',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  command['description'],
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDragOverlay() {
-    return Positioned(
-      left: _dragOffset.dx,
-      top: _dragOffset.dy,
-      child: Container(
-        width: 100,
-        height: 100,
-        decoration: BoxDecoration(
-          color: Colors.blue.withOpacity(0.8),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Icon(
-          Icons.drag_handle,
-          color: Colors.white,
-          size: 32,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProcessingOverlay() {
-    return Positioned(
-      left: 0,
-      top: 0,
-      right: 0,
-      bottom: 0,
-      child: Container(
-        color: Colors.black.withOpacity(0.8),
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.purple.withOpacity(0.9),
-                  Colors.blue.withOpacity(0.9),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.cloud_upload, color: Colors.white, size: 60),
-                const SizedBox(height: 16),
-                const Text(
-                  'Escaneando Documento...',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  _processingStatus,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 16,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                const CircularProgressIndicator(color: Colors.white),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _toggleVoiceSearch() {
-    setState(() {
-      _isListening = !_isListening;
-      if (_isListening) {
-        _voiceController.forward();
-        _simulateVoiceCommand();
-      } else {
-        _voiceController.reverse();
-        _currentCommand = '';
-      }
-    });
-  }
-
-  void _simulateVoiceCommand() {
-    // Simular comando de voz
-    Future.delayed(const Duration(seconds: 2), () {
-      if (_isListening) {
-        setState(() {
-          _currentCommand = 'mostrar críticos';
-          _isListening = false;
-        });
-        _executeVoiceCommand('filter_critical');
-      }
-    });
-  }
-
-  void _executeVoiceCommand(String action) {
-    switch (action) {
-      case 'filter_critical':
-        context
-            .read<DigitalDocumentProvider>()
-            .updateFilters(priority: DocumentPriority.critico);
-        break;
-      case 'filter_expenses':
-        context
-            .read<DigitalDocumentProvider>()
-            .updateFilters(type: DocumentType.gastosMensuales);
-        break;
-      case 'filter_contracts':
-        context
-            .read<DigitalDocumentProvider>()
-            .updateFilters(type: DocumentType.contrato);
-        break;
-      case 'upload_document':
-        _showUploadDialog();
-        break;
-      case 'full_analysis':
-        _showFullAnalysis();
-        break;
-    }
-  }
-
-  void _executeQuickAction(String action) {
-    switch (action) {
-      case 'scan':
-        _startDocumentScan();
-        break;
-      case 'voice':
-        setState(() => _showVoiceCommands = true);
-        break;
-      case 'ai':
-        setState(() => _showAIInsights = true);
-        break;
-      case 'analytics':
-        _showFullAnalysis();
-        break;
-    }
-  }
-
-  void _startDocumentScan() async {
-    print('🔍 Iniciando escaneo de documento...');
-    setState(() {
-      _isProcessingDocument = true;
-      _processingStatus = 'Abriendo cámara...';
-    });
-
-    try {
-      // Simular tiempo de escaneo real
-      await Future.delayed(const Duration(milliseconds: 500));
-      setState(() {
-        _processingStatus = 'Capturando imagen...';
-      });
-      await Future.delayed(const Duration(milliseconds: 800));
-      setState(() {
-        _processingStatus = 'Procesando documento...';
-      });
-      await Future.delayed(const Duration(milliseconds: 1200));
-
-      print('📸 Procesando documento con DigitalDocumentProvider...');
-      // Procesar el documento real
-      await context.read<DigitalDocumentProvider>().uploadDocumentFromCamera();
-
-      setState(() {
-        _isProcessingDocument = false;
-        _processingStatus = '';
-      });
-
-      print('✅ Documento procesado, obteniendo lista de documentos...');
-      // Obtener el documento recién creado y mostrar información REAL
-      final documents =
-          context.read<DigitalDocumentProvider>().filteredDocuments;
-      print('📄 Documentos encontrados: ${documents.length}');
-
-      if (documents.isNotEmpty) {
-        final lastDocument = documents.first;
-        print('🎯 Mostrando diálogo para documento: ${lastDocument.title}');
-
-        // Mostrar diálogo con información REAL del documento
-        _showRealDocumentDialog(lastDocument);
-      } else {
-        print('❌ No se encontraron documentos después del escaneo');
-        _showErrorDialog('No se pudo procesar el documento');
-      }
-    } catch (e) {
-      print('💥 Error durante el escaneo: $e');
-      setState(() {
-        _isProcessingDocument = false;
-        _processingStatus = '';
-      });
-
-      _showErrorDialog('Error al escanear: $e');
-    }
-  }
-
-  void _showRealDocumentDialog(DigitalDocument document) {
-    print(
-        '🎯 _showRealDocumentDialog llamado con documento: ${document.title}');
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
-        title: const Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.green, size: 24),
-            SizedBox(width: 8),
-            Text(
-              '¡Documento Escaneado!',
-              style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'El documento ha sido procesado exitosamente:',
-              style: TextStyle(color: Colors.white70),
-            ),
-            const SizedBox(height: 16),
-            _buildDetailRow('Título', document.title),
-            _buildDetailRow('Tipo', document.documentType.displayName),
-            _buildDetailRow(
-                'Monto',
-                document.montoTotal != null
-                    ? '${document.montoTotal!.toStringAsFixed(0)} XAF'
-                    : 'No aplica'),
-            _buildDetailRow(
-                'Empresa',
-                document.empresasInvolucradas?.isNotEmpty == true
-                    ? document.empresasInvolucradas!.first
-                    : 'No aplica'),
-            _buildDetailRow('Prioridad', document.priority.displayName),
-            _buildDetailRow('Fecha', _formatDate(document.uploadedAt)),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.info, color: Colors.green, size: 16),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'El documento está ahora disponible en el sistema. Toca "Ver Documento" para abrir el PDF.',
-                      style: TextStyle(color: Colors.green, fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Abrir el PDF del documento
-              final authProvider = context.read<AuthProvider>();
-              final isDirector = authProvider.role == 'Director General';
-
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PDFViewerScreen(
-                    document: document,
-                    isDirector: isDirector,
-                  ),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Ver Documento'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
-        title: const Row(
-          children: [
-            Icon(Icons.error, color: Colors.red, size: 24),
-            SizedBox(width: 8),
-            Text(
-              'Error',
-              style: TextStyle(color: Colors.white),
-            ),
-          ],
-        ),
-        content: Text(
-          message,
-          style: const TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showScanSuccessDialog() {
-    final documents = context.read<DigitalDocumentProvider>().filteredDocuments;
-    if (documents.isEmpty) return;
-
-    final lastDocument = documents.first;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
-        title: const Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.green, size: 24),
-            SizedBox(width: 8),
-            Text(
-              '¡Documento Escaneado!',
-              style:
-                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'El documento ha sido procesado exitosamente:',
-              style: TextStyle(color: Colors.white70),
-            ),
-            const SizedBox(height: 16),
-            _buildDetailRow('Título', lastDocument.title),
-            _buildDetailRow('Tipo', lastDocument.documentType.displayName),
-            _buildDetailRow(
-                'Monto',
-                lastDocument.montoTotal != null
-                    ? '${lastDocument.montoTotal!.toStringAsFixed(0)} XAF'
-                    : 'No aplica'),
-            _buildDetailRow(
-                'Empresa',
-                lastDocument.empresasInvolucradas?.isNotEmpty == true
-                    ? lastDocument.empresasInvolucradas!.first
-                    : 'No aplica'),
-            _buildDetailRow('Prioridad', lastDocument.priority.displayName),
-            _buildDetailRow('Fecha', _formatDate(lastDocument.uploadedAt)),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.info, color: Colors.green, size: 16),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'El documento está ahora disponible en el sistema. Toca "Ver Resultados" para ver los detalles completos.',
-                      style: TextStyle(color: Colors.green, fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Mostrar los resultados en el panel de IA
+            onChanged: (value) {
               setState(() {
-                _showAIInsights = true;
+                _searchQuery = value;
               });
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Ver Resultados'),
           ),
-        ],
-      ),
-    );
-  }
-
-  void _showProcessedDocument(Map<String, dynamic> doc) {
-    // Obtener el documento real del provider
-    final documents = context.read<DigitalDocumentProvider>().filteredDocuments;
-    final realDocument = documents.firstWhere(
-      (document) => document.title == doc['title'],
-      orElse: () => documents.first,
-    );
-
-    final authProvider = context.read<AuthProvider>();
-    final isDirector = authProvider.role == 'Director General';
-
-    // Abrir el visor PDF directamente
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PDFViewerScreen(
-          document: realDocument,
-          isDirector: isDirector,
-        ),
-      ),
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
-  }
-
-  void _startDrag(DigitalDocument document) {
-    setState(() {
-      _isDragging = true;
-      _dragOffset = const Offset(100, 100);
-    });
-  }
-
-  void _showCriticalDocument() {
-    _showAnalysisDialog(
-        'Documento Crítico', 'Presupuesto 2026 requiere aprobación inmediata');
-  }
-
-  void _showExpenseAnalysis() {
-    _showAnalysisDialog(
-        'Análisis de Gastos', 'Gastos mensuales 15% sobre presupuesto');
-  }
-
-  void _showContractAnalysis() {
-    _showAnalysisDialog(
-        'Análisis de Contratos', '3 contratos próximos a vencer');
-  }
-
-  void _showFullAnalysis() {
-    _showAnalysisDialog(
-        'Análisis Completo', 'Análisis completo del sistema ejecutado');
-  }
-
-  void _showAnalysisDialog(String title, String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
-        title: Text(title, style: const TextStyle(color: Colors.white)),
-        content: Text(message, style: const TextStyle(color: Colors.white70)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showUploadDialog() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF1A1A2E),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          const SizedBox(height: 12),
+          // Estadísticas rápidas
+          Row(
             children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade600,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+              _buildStatCard(
+                  'Total', _filteredDocuments.length.toString(), Colors.blue),
+              const SizedBox(width: 8),
+              _buildStatCard(
+                  'PDF',
+                  _filteredDocuments
+                      .where((d) => d['type'] == 'PDF')
+                      .length
+                      .toString(),
+                  Colors.red),
+              const SizedBox(width: 8),
+              _buildStatCard(
+                  'Excel',
+                  _filteredDocuments
+                      .where((d) => d['type'] == 'Excel')
+                      .length
+                      .toString(),
+                  Colors.green),
+              const SizedBox(width: 8),
+              _buildStatCard(
+                  'Escaneados',
+                  _filteredDocuments
+                      .where((d) => d['isScanned'] == true)
+                      .length
+                      .toString(),
+                  Colors.orange),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: color,
               ),
-              const SizedBox(height: 20),
-              const Text(
-                'Subir Documento',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
               ),
-              const SizedBox(height: 20),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryTabs() {
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Colors.grey[300]!),
+        ),
+      ),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _categories.length,
+        itemBuilder: (context, index) {
+          final category = _categories[index];
+          final isSelected = _selectedCategory == category;
+          final docCount = category == 'Todos'
+              ? _documentsByCategory.values
+                  .fold(0, (sum, docs) => sum + docs.length)
+              : _documentsByCategory[category]?.length ?? 0;
+
+          return Container(
+            margin: const EdgeInsets.only(right: 8, top: 8, bottom: 8),
+            child: FilterChip(
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(category),
+                  const SizedBox(width: 4),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.white : Colors.grey[300],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      docCount.toString(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: isSelected ? Colors.blue[700] : Colors.grey[600],
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              selected: isSelected,
+              onSelected: (selected) {
+                setState(() {
+                  _selectedCategory = category;
+                });
+              },
+              backgroundColor: Colors.grey[100],
+              selectedColor: Colors.blue[100],
+              checkmarkColor: Colors.blue[700],
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.blue[700] : Colors.grey[700],
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDocumentsList() {
+    if (_filteredDocuments.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.folder_open,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _searchQuery.isNotEmpty
+                  ? 'No se encontraron documentos'
+                  : 'No hay documentos en esta categoría',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _searchQuery.isNotEmpty
+                  ? 'Intenta con otros términos de búsqueda'
+                  : 'Los documentos aparecerán aquí cuando estén disponibles',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _filteredDocuments.length,
+      itemBuilder: (context, index) {
+        final document = _filteredDocuments[index];
+        return _buildDocumentCard(document);
+      },
+    );
+  }
+
+  Widget _buildDocumentCard(Map<String, dynamic> document) {
+    final isPDF = document['type'] == 'PDF';
+    final priorityColor = _getPriorityColor(document['priority']);
+    final hasImage = document['hasImage'] ?? false;
+    final isScanned = document['isScanned'] ?? false;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(
+          color: priorityColor.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: InkWell(
+        onTap: () => _openDocument(document),
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Row(
                 children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isPDF ? Colors.red[100] : Colors.green[100],
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Icon(
+                      isPDF ? Icons.picture_as_pdf : Icons.table_chart,
+                      color: isPDF ? Colors.red[700] : Colors.green[700],
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: ModernButton(
-                      text: 'Cámara',
-                      icon: Icons.camera_alt,
-                      onPressed: () {
-                        Navigator.pop(context);
-                        context
-                            .read<DigitalDocumentProvider>()
-                            .uploadDocumentFromCamera();
-                      },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                document['title'],
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            if (isScanned)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange[100],
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.camera_alt,
+                                      size: 12,
+                                      color: Colors.orange[700],
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      'Escaneado',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.orange[700],
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          document['description'],
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: priorityColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: priorityColor.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      document['priority'],
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: priorityColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(Icons.person, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text(
+                    document['author'],
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text(
+                    document['date'],
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Expanded(
-                    child: ModernButton(
-                      text: 'Galería',
-                      icon: Icons.photo_library,
-                      onPressed: () {
-                        Navigator.pop(context);
-                        context
-                            .read<DigitalDocumentProvider>()
-                            .uploadDocumentFromGallery();
-                      },
+                  Icon(Icons.storage, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text(
+                    document['size'],
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showDocumentDetails(DigitalDocument document) {
-    final authProvider = context.read<AuthProvider>();
-    final isDirector = authProvider.role == 'Director General';
-
-    // Si el documento tiene PDF y es Director, abrir visor PDF directamente
-    if (document.hasPDF && isDirector) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PDFViewerScreen(
-            document: document,
-            isDirector: isDirector,
-          ),
-        ),
-      );
-      return;
-    }
-
-    // Si no es Director o no tiene PDF, mostrar detalles
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
-        title: Row(
-          children: [
-            Icon(
-              _getDocumentIcon(document.documentType),
-              color: _getDocumentColor(document.documentType),
-              size: 24,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                document.title,
-                style: const TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              document.description,
-              style: const TextStyle(color: Colors.white70),
-            ),
-            const SizedBox(height: 16),
-            _buildDetailRow('Tipo', document.documentType.displayName),
-            _buildDetailRow('Estado', document.status.displayName),
-            _buildDetailRow('Prioridad', document.priority.displayName),
-            _buildDetailRow('Subido por', document.uploadedBy),
-            _buildDetailRow('Fecha', _formatDate(document.uploadedAt)),
-            if (document.montoTotal != null)
-              _buildDetailRow(
-                  'Monto', '${document.montoTotal!.toStringAsFixed(0)} XAF'),
-            if (document.empresasInvolucradas?.isNotEmpty == true)
-              _buildDetailRow('Empresa', document.empresasInvolucradas!.first),
-            const SizedBox(height: 12),
-            if (document.hasPDF && !isDirector) ...[
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.warning, color: Colors.orange, size: 16),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Solo el Director puede ver este documento PDF',
-                        style: TextStyle(color: Colors.orange, fontSize: 12),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (hasImage)
+                    TextButton.icon(
+                      onPressed: () => _viewDocumentImage(document),
+                      icon: const Icon(Icons.image, size: 16),
+                      label: const Text('Ver Imagen'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.purple[700],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ] else if (document.hasPDF && isDirector) ...[
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.picture_as_pdf, color: Colors.green, size: 16),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Documento PDF disponible - Toca para abrir',
-                        style: TextStyle(color: Colors.green, fontSize: 12),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
-          ),
-          if (document.hasPDF && isDirector)
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PDFViewerScreen(
-                      document: document,
-                      isDirector: isDirector,
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    onPressed: () => _previewDocument(document),
+                    icon: const Icon(Icons.visibility, size: 16),
+                    label: const Text('Vista previa'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.blue[700],
                     ),
                   ),
-                );
-              },
-              style: TextButton.styleFrom(foregroundColor: Colors.blue),
-              child: const Text('Ver PDF'),
-            ),
-        ],
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    onPressed: () => _downloadDocument(document),
+                    icon: const Icon(Icons.download, size: 16),
+                    label: const Text('Descargar'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.green[700],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    onPressed: () => _printDocument(document),
+                    icon: const Icon(Icons.print, size: 16),
+                    label: const Text('Imprimir'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.orange[700],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              '$label:',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  IconData _getDocumentIcon(DocumentType type) {
-    switch (type) {
-      case DocumentType.presupuesto:
-        return Icons.account_balance_wallet;
-      case DocumentType.contrato:
-        return Icons.description;
-      case DocumentType.gastosMensuales:
-        return Icons.receipt;
-      default:
-        return Icons.picture_as_pdf;
-    }
-  }
-
-  Color _getDocumentColor(DocumentType type) {
-    switch (type) {
-      case DocumentType.presupuesto:
+  Color _getPriorityColor(String priority) {
+    switch (priority) {
+      case 'Alta':
+        return Colors.red;
+      case 'Media':
         return Colors.orange;
-      case DocumentType.contrato:
-        return Colors.blue;
-      case DocumentType.gastosMensuales:
+      case 'Baja':
         return Colors.green;
       default:
         return Colors.grey;
     }
   }
 
-  void _confirmDelete(DigitalDocument document) {
+  void _openDocument(Map<String, dynamic> document) {
+    // Simular apertura del documento
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
-        title: const Text('Eliminar Documento',
-            style: TextStyle(color: Colors.white)),
-        content: Text(
-          '¿Estás seguro de que quieres eliminar "${document.title}"?',
-          style: const TextStyle(color: Colors.white70),
+        title: Text('Abrir ${document['title']}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('¿Cómo deseas abrir este documento?'),
+            const SizedBox(height: 16),
+            if (document['hasImage'] == true)
+              ListTile(
+                leading: const Icon(Icons.image),
+                title: const Text('Ver imagen escaneada'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _viewDocumentImage(document);
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.visibility),
+              title: const Text('Vista previa'),
+              onTap: () {
+                Navigator.pop(context);
+                _previewDocument(document);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.open_in_new),
+              title: const Text('Abrir en nueva pestaña'),
+              onTap: () {
+                Navigator.pop(context);
+                _openInNewTab(document);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.download),
+              title: const Text('Descargar'),
+              onTap: () {
+                Navigator.pop(context);
+                _downloadDocument(document);
+              },
+            ),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancelar'),
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context
-                  .read<DigitalDocumentProvider>()
-                  .deleteDocument(document.id);
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Eliminar'),
+        ],
+      ),
+    );
+  }
+
+  void _viewDocumentImage(Map<String, dynamic> document) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(8),
+                  topRight: Radius.circular(8),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.camera_alt,
+                    color: Colors.orange[700],
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Documento Escaneado: ${document['title']}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              height: 400,
+              width: 300,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(8),
+                  bottomRight: Radius.circular(8),
+                ),
+              ),
+              child: _buildImageContent(document),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageContent(Map<String, dynamic> document) {
+    // Si el documento tiene datos de imagen reales
+    if (document['imageData'] != null) {
+      return ClipRRect(
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(8),
+          bottomRight: Radius.circular(8),
+        ),
+        child: Image.memory(
+          document['imageData'],
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+        ),
+      );
+    }
+
+    // Si no tiene imagen real, mostrar placeholder
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.image,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Imagen del documento',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Aquí se mostraría la imagen escaneada\n${document['title']}',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () => _downloadDocument(document),
+                icon: const Icon(Icons.download),
+                label: const Text('Descargar'),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: () => _printDocument(document),
+                icon: const Icon(Icons.print),
+                label: const Text('Imprimir'),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Color _getDocumentTypeColor(DocumentType type) {
-    switch (type) {
-      case DocumentType.gastosMensuales:
-        return Colors.red;
-      case DocumentType.presupuesto:
-        return Colors.purple;
-      case DocumentType.contrato:
-        return Colors.blue;
-      case DocumentType.personal:
-        return Colors.green;
-      case DocumentType.indemnizacion:
-        return Colors.orange;
-      default:
-        return Colors.grey;
+  void _showScanDocumentDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Escanear Nuevo Documento'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Selecciona el tipo de documento a escanear:'),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Usar Cámara'),
+              subtitle: const Text('Capturar con la cámara del dispositivo'),
+              onTap: () {
+                Navigator.pop(context);
+                _scanDocument('camera');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Seleccionar de Galería'),
+              subtitle: const Text('Elegir imagen existente'),
+              onTap: () {
+                Navigator.pop(context);
+                _scanDocument('gallery');
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _scanDocument(String source) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: source == 'camera' ? ImageSource.camera : ImageSource.gallery,
+        imageQuality: 80,
+      );
+
+      if (image != null) {
+        // Leer la imagen como bytes
+        final Uint8List imageBytes = await image.readAsBytes();
+
+        // Simular procesamiento y categorización automática
+        _showAutoCategorizationDialog(imageBytes, image.name);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al escanear: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
+  }
+
+  void _showAutoCategorizationDialog(Uint8List imageBytes, String fileName) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.auto_awesome, color: Colors.green),
+            SizedBox(width: 8),
+            Text('Documento Detectado'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('El sistema ha detectado automáticamente:'),
+            const SizedBox(height: 16),
+            _buildDetectionItem('Tipo', 'Solicitud de Libertad Condicional'),
+            _buildDetectionItem('Categoría', 'Legales'),
+            _buildDetectionItem('Prioridad', 'Alta'),
+            _buildDetectionItem('Confianza', '95%'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green[200]!),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'El documento será guardado automáticamente en la categoría "Legales"',
+                      style: TextStyle(color: Colors.green),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _confirmDocumentSave(imageBytes, fileName);
+            },
+            child: const Text('Guardar Documento'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetectionItem(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Text(
+            '$label: ',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          Expanded(
+            child: Text(value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDocumentSave(Uint8List imageBytes, String fileName) {
+    // Crear nuevo documento con la imagen real
+    final newDocument = {
+      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'title':
+          'Documento Escaneado - ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+      'type': 'PDF',
+      'size': '${(imageBytes.length / 1024).toStringAsFixed(1)} KB',
+      'date':
+          '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}',
+      'author': 'Director General',
+      'category': 'Legales',
+      'priority': 'Alta',
+      'description': 'Documento escaneado automáticamente',
+      'hasImage': true,
+      'isScanned': true,
+      'imageData': imageBytes,
+      'fileName': fileName,
+    };
+
+    // Agregar a la lista de documentos subidos
+    setState(() {
+      _uploadedDocuments.add(newDocument);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('✅ Documento guardado exitosamente en "Legales"'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _previewDocument(Map<String, dynamic> document) {
+    // Simular vista previa
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Vista previa: ${document['title']}'),
+        content: Container(
+          width: 400,
+          height: 500,
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey[300]!),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(8),
+                    topRight: Radius.circular(8),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      document['type'] == 'PDF'
+                          ? Icons.picture_as_pdf
+                          : Icons.table_chart,
+                      color:
+                          document['type'] == 'PDF' ? Colors.red : Colors.green,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        document['title'],
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Autor: ${document['author']}'),
+                      Text('Fecha: ${document['date']}'),
+                      Text('Tamaño: ${document['size']}'),
+                      Text('Categoría: ${document['category']}'),
+                      Text('Prioridad: ${document['priority']}'),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Contenido del documento:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            document['description'],
+                            style: TextStyle(color: Colors.grey[700]),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => _printDocument(document),
+            child: const Text('Imprimir'),
+          ),
+          TextButton(
+            onPressed: () => _downloadDocument(document),
+            child: const Text('Descargar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openInNewTab(Map<String, dynamic> document) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Abriendo ${document['title']} en nueva pestaña...'),
+        backgroundColor: Colors.blue,
+      ),
+    );
+  }
+
+  void _downloadDocument(Map<String, dynamic> document) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Descargando ${document['title']}...'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  void _printDocument(Map<String, dynamic> document) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Imprimir documento'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('¿Imprimir "${document['title']}"?'),
+            const SizedBox(height: 16),
+            const Text('Opciones de impresión:'),
+            CheckboxListTile(
+              title: const Text('Todas las páginas'),
+              value: true,
+              onChanged: (value) {},
+            ),
+            CheckboxListTile(
+              title: const Text('Solo primera página'),
+              value: false,
+              onChanged: (value) {},
+            ),
+            CheckboxListTile(
+              title: const Text('Incluir metadatos'),
+              value: true,
+              onChanged: (value) {},
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Imprimiendo ${document['title']}...'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            },
+            child: const Text('Imprimir'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPrintOptions() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Imprimir documentos'),
+        content: const Text('Selecciona los documentos que deseas imprimir'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Imprimiendo documentos seleccionados...'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            },
+            child: const Text('Imprimir'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDownloadOptions() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Descargar documentos'),
+        content: const Text('Selecciona los documentos que deseas descargar'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Descargando documentos seleccionados...'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            child: const Text('Descargar'),
+          ),
+        ],
+      ),
+    );
   }
 }

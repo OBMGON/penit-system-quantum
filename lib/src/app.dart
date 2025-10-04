@@ -25,6 +25,7 @@ import 'screens/expense_management_screen.dart';
 import 'screens/secretary_workspace_screen.dart';
 import 'screens/director_workspace_screen.dart';
 import 'screens/smart_scanner_screen.dart';
+import 'screens/digital_documents_screen.dart';
 import 'theme/app_theme.dart';
 import 'screens/medicine_management_screen.dart' as medicine;
 import 'screens/splash_screen.dart';
@@ -76,6 +77,13 @@ class App extends StatelessWidget {
               ? const HospitalizationsScreen()
               : const NoAccessScreen();
         },
+        // Alias: acceso rápido desde tarjetas
+        '/hospital': (context) {
+          final auth = Provider.of<AuthProvider>(context, listen: false);
+          return auth.canAccessHospitalizations
+              ? const HospitalizationsScreen()
+              : const NoAccessScreen();
+        },
         '/reports': (context) {
           final auth = Provider.of<AuthProvider>(context, listen: false);
           return auth.canAccessReports
@@ -116,11 +124,26 @@ class App extends StatelessWidget {
               ? const CriminalRecordScreen()
               : const NoAccessScreen();
         },
+        // Documentos digitales (alias)
+        '/documents': (context) {
+          final auth = Provider.of<AuthProvider>(context, listen: false);
+          return auth.canAccessDocuments
+              ? const DigitalDocumentsScreen()
+              : const NoAccessScreen();
+        },
         '/prison-map': (context) => const PrisonMapScreen(),
         '/cancellation-request': (context) {
           final auth = Provider.of<AuthProvider>(context, listen: false);
           if (!auth.isDirector) return const NoAccessScreen();
 
+          final args = ModalRoute.of(context)?.settings.arguments
+              as Map<String, dynamic>?;
+          return CancellationRequestScreen(autoFillData: args);
+        },
+        // Alias para compatibilidad
+        '/record-cancellation': (context) {
+          final auth = Provider.of<AuthProvider>(context, listen: false);
+          if (!auth.isDirector) return const NoAccessScreen();
           final args = ModalRoute.of(context)?.settings.arguments
               as Map<String, dynamic>?;
           return CancellationRequestScreen(autoFillData: args);
@@ -141,6 +164,13 @@ class App extends StatelessWidget {
         '/secretary-workspace': (context) => const SecretaryWorkspaceScreen(),
         '/add-hospitalization': (context) => const AddHospitalizationScreen(),
         '/smart-scanner': (context) {
+          final auth = Provider.of<AuthProvider>(context, listen: false);
+          return auth.canAccessScanner
+              ? const SmartScannerScreen()
+              : const NoAccessScreen();
+        },
+        // Alias
+        '/scanner': (context) {
           final auth = Provider.of<AuthProvider>(context, listen: false);
           return auth.canAccessScanner
               ? const SmartScannerScreen()
@@ -194,15 +224,9 @@ class App extends StatelessWidget {
         },
         '/inmate-registration': (context) {
           final auth = Provider.of<AuthProvider>(context, listen: false);
-          if (!auth.canAccessDocuments) return const NoAccessScreen();
-
-          final args = ModalRoute.of(context)?.settings.arguments
-              as Map<String, dynamic>?;
-          // TODO: Implementar InmateRegistrationScreen
-          return const Scaffold(
-            body: Center(
-                child: Text('Inmate Registration Screen - En desarrollo')),
-          );
+          return auth.canRegisterInmates
+              ? const RegisterInmateScreen()
+              : const NoAccessScreen();
         },
         '/visitor-request': (context) {
           final auth = Provider.of<AuthProvider>(context, listen: false);

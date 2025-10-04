@@ -37,34 +37,29 @@ class _LoginScreenState extends State<LoginScreen> {
         _loading = true;
         _error = null;
       });
-      await Future.delayed(const Duration(seconds: 2)); // Simula carga
-      final user = _userController.text.trim();
-      final pass = _passController.text.trim();
-      final role = _selectedRole;
-      if (role != null &&
-          _roles.contains(role) &&
-          ((role == 'Director General' &&
-                  user == 'Isacio97' &&
-                  pass == '1234') ||
-              (role == 'Secretaría' &&
-                  user == 'secretaria' &&
-                  pass == '1234') ||
-              (role == 'Jefe de Seguridad' &&
-                  user == 'seguridad' &&
-                  pass == '1234') ||
-              (role == 'Funcionario' &&
-                  user == 'funcionario' &&
-                  pass == '1234') ||
-              (role == 'Médico' && user == 'medico' && pass == '1234') ||
-              (role == 'Auditor' && user == 'auditor' && pass == '1234'))) {
-        // Guardar usuario y rol en AuthProvider
-        Provider.of<AuthProvider>(context, listen: false)
-            .login(user, pass, role);
-        setState(() {
-          _loading = false;
-        });
-        Navigator.pushReplacementNamed(context, '/main');
-      } else {
+
+      try {
+        final user = _userController.text.trim();
+        final pass = _passController.text.trim();
+        final role = _selectedRole;
+
+        if (role != null && _roles.contains(role)) {
+          // Usar el AuthProvider para hacer login
+          await Provider.of<AuthProvider>(context, listen: false)
+              .login(user, pass, role);
+
+          setState(() {
+            _loading = false;
+          });
+
+          Navigator.pushReplacementNamed(context, '/main');
+        } else {
+          setState(() {
+            _loading = false;
+            _error = 'Por favor selecciona un rol válido';
+          });
+        }
+      } catch (e) {
         setState(() {
           _loading = false;
           _error = 'Usuario, contraseña o rol incorrectos';
