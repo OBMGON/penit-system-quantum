@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Large files that should not be in repository
+*.zip
+SistemaPenitenciarioNacional_PaqueteFinal.zip
+docs/archivo_real_con*
